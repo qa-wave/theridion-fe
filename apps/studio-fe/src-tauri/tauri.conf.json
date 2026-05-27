@@ -39,6 +39,15 @@
     "externalBin": ["binaries/theridion-sidecar-fe"],
     "category": "DeveloperTool",
     "shortDescription": "Frontend automation — Theridion FE",
-    "longDescription": "Theridion FE — frontend automation desktop app. Playwright multi-browser (Chromium, Firefox, WebKit), visual regression, accessibility audit (axe-core), network interception. Code authoring + run history in one file-based workspace."
+    "longDescription": "Theridion FE — frontend automation desktop app. Playwright multi-browser (Chromium, Firefox, WebKit), visual regression, accessibility audit (axe-core), network interception. Code authoring + run history in one file-based workspace.",
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/qa-wave/theridion/releases/latest/download/latest-fe.json"
+      ],
+      "pubkey": ""
+    }
   }
 }
