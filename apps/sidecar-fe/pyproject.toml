@@ -13,11 +13,6 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "httpx[http2]>=0.28",
     "pydantic>=2.10",
-    "cryptography>=48.0.0",
-    "jsonschema>=4.26.0",
-    "pyyaml>=6.0.3",
-    "python-multipart>=0.0.28",
-    "jsonpath-ng>=1.8.0",
     "lxml>=6.1.0",
     "pillow>=11.0",
 ]
