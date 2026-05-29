@@ -34,7 +34,7 @@ dev = [
 ]
 
 [project.scripts]
-theridion-sidecar-fe = "theridion_sidecar.cli:main"
+theridion-sidecar-fe = "theridion_sidecar.main:main"
 
 [build-system]
 requires = ["hatchling"]
