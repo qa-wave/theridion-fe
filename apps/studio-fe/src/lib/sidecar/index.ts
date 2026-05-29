@@ -216,6 +216,11 @@ export type {
   SpinAssertionResult, SpinStepAssert,
 } from "./spin";
 
+export type {
+  MobileTool, MobileToolingOutput, MobileDevice, MobileDevicesOutput,
+  MobileMessageOutput, AppiumStartOutput, AppiumStatusOutput,
+} from "./mobile";
+
 // ---- Compose the unified sidecar object from all sub-modules ----
 
 import { collectionsMethods } from "./collections";
@@ -236,6 +241,7 @@ import { templateEngineMethods } from "./templateEngine";
 import { productMethods } from "./product";
 import { silkMethods } from "./silk";
 import { spinMethods } from "./spin";
+import { mobileMethods } from "./mobile";
 
 export const sidecar = {
   ...requestsMethods,
@@ -256,4 +262,5 @@ export const sidecar = {
   ...productMethods,
   ...silkMethods,
   ...spinMethods,
+  ...mobileMethods,
 } as const;

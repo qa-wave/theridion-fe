@@ -113,6 +113,8 @@ export interface SilkFramework {
   file_extension: string;
   codegen_target: string | null;
   recordable: boolean;
+  /** True when the framework records via Playwright codegen + transpile (e.g. Cypress, Selenium). */
+  recordable_via_transpile: boolean;
   runnable: boolean;
   template: string;
 }

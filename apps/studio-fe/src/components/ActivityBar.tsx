@@ -1,7 +1,7 @@
-import { Activity, MonitorPlay, Server, Zap } from "lucide-react";
+import { Activity, MonitorPlay, Server, Smartphone, Zap } from "lucide-react";
 import { Tooltip } from "./Tooltip";
 
-export type AppMode = "silk" | "monitors" | "hubOverview";
+export type AppMode = "silk" | "monitors" | "hubOverview" | "mobile";
 
 // Per-mode accent colors. FE uses violet master accent.
 const MODE_ACCENT: Partial<Record<AppMode, string>> = {
@@ -18,6 +18,7 @@ const modes: { id: AppMode; icon: typeof Zap; label: string }[] = [
   { id: "silk", icon: MonitorPlay, label: "Silk (Frontend tests)" },
   { id: "monitors", icon: Activity, label: "Test monitors" },
   { id: "hubOverview", icon: Server, label: "Hub Overview" },
+  { id: "mobile", icon: Smartphone, label: "Mobilní zařízení" },
 ];
 
 export function ActivityBar({ mode, onModeChange }: Props) {

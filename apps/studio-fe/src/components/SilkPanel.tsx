@@ -393,6 +393,9 @@ function RecordDialog({
   }, []);
 
   const selectedFramework = frameworks.find((f) => f.id === selectedFrameworkId) ?? null;
+  // Recording is enabled when: no framework loaded yet (null) or framework.recordable === true.
+  // The 4 transpile-target frameworks (cypress, selenium-python, selenium-java, webdriverio)
+  // have recordable: true AND recordable_via_transpile: true — they are also allowed.
   const canRecord = selectedFramework === null || selectedFramework.recordable;
 
   const handleStart = async () => {
@@ -454,11 +457,17 @@ function RecordDialog({
                   )}
                 </select>
               )}
-              {/* Non-recordable hint */}
+              {/* Transpile-via-Playwright hint — recordable but goes through transpiler */}
+              {canRecord && selectedFramework?.recordable_via_transpile && (
+                <p className="text-[10px] text-neutral-400 mt-0.5">
+                  Nahráno přes Playwright a převedeno do {selectedFramework.label}.
+                </p>
+              )}
+              {/* Truly non-recordable hint (mobile frameworks) */}
               {!canRecord && selectedFramework && (
                 <p className="text-[10px] text-amber-400 mt-0.5">
                   Nahrávání zatím není podporováno pro {selectedFramework.label} — použij{" "}
-                  <strong className="text-amber-300">Nový test (ruční tvorba)</strong>.
+                  <strong className="text-amber-300">Nový test</strong>.
                 </p>
               )}
             </div>

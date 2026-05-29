@@ -3,6 +3,7 @@ import { Activity } from "lucide-react";
 import { ActivityBar, type AppMode } from "./components/ActivityBar";
 import { SilkPanel } from "./components/SilkPanel";
 import { HubOverviewPanel } from "./components/HubOverviewPanel";
+import { MobilePanel } from "./components/MobilePanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EmptyState } from "./components/EmptyState";
 
@@ -30,6 +31,7 @@ export default function App() {
               />
             )}
             {mode === "hubOverview" && <HubOverviewPanel />}
+            {mode === "mobile" && <MobilePanel onToast={handleToast} />}
           </main>
         </div>
         <footer className="flex h-7 items-center justify-between border-t border-white/[0.06] bg-neutral-950 px-3 text-[11px] text-neutral-500">
