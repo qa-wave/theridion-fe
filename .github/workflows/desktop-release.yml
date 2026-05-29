@@ -217,20 +217,19 @@ jobs:
         shell: bash
         run: bash scripts/build-bundle.sh
 
+      # Code signing env vars NOT passed to tauri-action — when the matching
+      # secrets are empty, `security import` would fail with "params not valid".
+      # Tauri-action signs only when APPLE_CERTIFICATE/WINDOWS_CERTIFICATE env
+      # are set; without them it produces unsigned artifacts (fine for V1
+      # release; user will see OS warnings until certs are provisioned, see
+      # docs/signing.md). The Import Apple certificate step above stays
+      # guarded so it doesn't run when the secret is empty.
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE:          ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY:     ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID:                   ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD:             ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID:              ${{ secrets.APPLE_TEAM_ID }}
-          WINDOWS_CERTIFICATE:          ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         with:
           projectPath:  ${{ matrix.studio_path }}
           releaseId:    ${{ needs.create-release.outputs.release-id }}
