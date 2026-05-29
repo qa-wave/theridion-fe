@@ -26,10 +26,12 @@ class Framework:
     # True when Silk can execute the spec today (only the Playwright TS runner).
     runnable: bool
     template: str = field(default="")
+    # True when recording is supported via Playwright → transpile pipeline.
+    recordable_via_transpile: bool = False
 
     @property
     def recordable(self) -> bool:
-        return self.codegen_target is not None
+        return self.codegen_target is not None or self.recordable_via_transpile
 
 
 _PW_TS_TEMPLATE = """\
@@ -257,6 +259,7 @@ _FRAMEWORKS: list[Framework] = [
         codegen_target=None,
         runnable=False,
         template=_CYPRESS_TEMPLATE,
+        recordable_via_transpile=True,
     ),
     Framework(
         id="selenium-python",
@@ -266,6 +269,7 @@ _FRAMEWORKS: list[Framework] = [
         codegen_target=None,
         runnable=False,
         template=_SELENIUM_PY_TEMPLATE,
+        recordable_via_transpile=True,
     ),
     Framework(
         id="selenium-java",
@@ -275,6 +279,7 @@ _FRAMEWORKS: list[Framework] = [
         codegen_target=None,
         runnable=False,
         template=_SELENIUM_JAVA_TEMPLATE,
+        recordable_via_transpile=True,
     ),
     Framework(
         id="webdriverio",
@@ -284,6 +289,7 @@ _FRAMEWORKS: list[Framework] = [
         codegen_target=None,
         runnable=False,
         template=_WEBDRIVERIO_TEMPLATE,
+        recordable_via_transpile=True,
     ),
     Framework(
         id="appium-python",

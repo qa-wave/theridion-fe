@@ -1031,11 +1031,11 @@ def test_spec_save_unknown_framework_returns_400(
 def test_record_start_non_recordable_framework_returns_400(
     client: TestClient,
 ) -> None:
-    """POST /api/silk/record/start with cypress (non-recordable) returns 400 before any subprocess."""
-    # Cypress is not recordable — error is raised before npx lookup.
+    """POST /api/silk/record/start with appium-python (mobile, non-recordable) returns 400."""
+    # appium-python is a mobile framework with no recording support.
     res = client.post(
         "/api/silk/record/start",
-        json={"url": "http://localhost:3000", "framework": "cypress"},
+        json={"url": "http://localhost:3000", "framework": "appium-python"},
     )
     assert res.status_code == 400
     assert "recording not yet supported" in res.json()["detail"]

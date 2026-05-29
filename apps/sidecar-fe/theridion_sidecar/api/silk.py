@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 
 from .. import storage
 from .. import silk_storage
+from .. import silk_transpile
 from . import silk_frameworks
 
 router = APIRouter(prefix="/api/silk", tags=["silk"])
@@ -58,6 +59,10 @@ _codegen_procs: dict[str, asyncio.subprocess.Process] = {}
 # Maps session_id → absolute path of the output file written by codegen
 _codegen_output_files: dict[str, Path] = {}
 
+# Maps session_id → user-requested framework id when it differs from codegen target
+# (i.e. for transpile-via-playwright-test frameworks like cypress/selenium-*/webdriverio)
+_codegen_request_framework: dict[str, str] = {}
+
 
 async def shutdown_codegen_procs() -> None:
     """Kill any codegen subprocesses still running at sidecar shutdown.
@@ -65,6 +70,7 @@ async def shutdown_codegen_procs() -> None:
     Called from the FastAPI lifespan teardown so an abrupt exit doesn't leak
     orphaned ``playwright codegen`` browser processes.
     """
+    _codegen_request_framework.clear()
     while _codegen_procs:
         _session_id, proc = _codegen_procs.popitem()
         if proc.returncode is not None:
@@ -132,6 +138,7 @@ class FrameworkInfo(BaseModel):
     file_extension: str
     codegen_target: str | None
     recordable: bool
+    recordable_via_transpile: bool = False
     runnable: bool
     template: str
 
@@ -345,6 +352,7 @@ def list_frameworks() -> FrameworksOutput:
             file_extension=fw.file_extension,
             codegen_target=fw.codegen_target,
             recordable=fw.recordable,
+            recordable_via_transpile=fw.recordable_via_transpile,
             runnable=fw.runnable,
             template=fw.template,
         )
@@ -961,7 +969,16 @@ async def record_start(body: RecordStartInput) -> RecordStartOutput:
     session_id = uuid.uuid4().hex
     output_dir = _silk_dir() / "codegen" / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / f"spec{fw.file_extension}"
+
+    # For transpile-via-playwright frameworks we always record as playwright-test TS
+    # and convert to the requested framework on stop.
+    is_transpile_target = fw.recordable_via_transpile and fw.codegen_target is None
+    effective_codegen_target = fw.codegen_target or "playwright-test"
+    effective_extension = ".spec.ts" if is_transpile_target else fw.file_extension
+    output_file = output_dir / f"spec{effective_extension}"
+
+    if is_transpile_target:
+        _codegen_request_framework[session_id] = fw.id
 
     env = {**os.environ}
     cwd = body.workspace_dir or str(output_dir)
@@ -970,7 +987,7 @@ async def record_start(body: RecordStartInput) -> RecordStartOutput:
         npx,
         "playwright",
         "codegen",
-        f"--target={fw.codegen_target}",
+        f"--target={effective_codegen_target}",
         f"--output={output_file}",
         body.url,
         stdout=asyncio.subprocess.PIPE,
@@ -1040,12 +1057,38 @@ async def record_stop(body: dict) -> RecordStopOutput:
     output_file = _codegen_output_files.pop(session_id, None) or (
         _silk_dir() / "codegen" / session_id / "spec.ts"
     )
+
+    # Retrieve (and remove) any pending transpile-target framework for this session.
+    requested_framework = _codegen_request_framework.pop(session_id, None)
+
     spec_text = ""
     spec_path_str: str | None = None
 
     if output_file.exists():
-        spec_text = output_file.read_text(encoding="utf-8")
-        spec_path_str = str(output_file)
+        raw_pw_text = output_file.read_text(encoding="utf-8")
+
+        if requested_framework is not None:
+            # Transpile Playwright-test TS into the user's requested framework.
+            try:
+                spec_text = silk_transpile.transpile_playwright_spec(
+                    requested_framework, raw_pw_text
+                )
+                # Write transpiled output next to the raw file so it has the right extension.
+                fw = silk_frameworks.get_framework(requested_framework)
+                ext = fw.file_extension if fw is not None else f".{requested_framework}"
+                transpiled_path = output_file.parent / f"spec{ext}"
+                transpiled_path.write_text(spec_text, encoding="utf-8")
+                spec_path_str = str(transpiled_path)
+            except Exception as exc:  # noqa: BLE001
+                # Fallback: return raw Playwright text with an error note.
+                spec_text = (
+                    f"// Transpilation failed ({exc}); raw Playwright output below.\n"
+                    + raw_pw_text
+                )
+                spec_path_str = str(output_file)
+        else:
+            spec_text = raw_pw_text
+            spec_path_str = str(output_file)
 
     return RecordStopOutput(
         session_id=session_id,
