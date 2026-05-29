@@ -237,7 +237,16 @@ async def _execute_sql_assert_step(
     step: SpinStep,
     variables: dict[str, Any],
 ) -> StepResult:
-    from ..api.jdbc_query import _run_sqlite, _run_postgres
+    try:
+        from ..api.jdbc_query import _run_sqlite, _run_postgres
+    except ImportError:
+        return StepResult(
+            step_name=step.name,
+            step_type="sql_assert",
+            status="error",
+            duration_ms=0.0,
+            error="sql_assert steps are not supported in the FE edition",
+        )
 
     sql = step.sql_assert
     assert sql is not None
@@ -303,7 +312,16 @@ async def _execute_kafka_produce_step(
     variables: dict[str, Any],
 ) -> StepResult:
     """Produce a Kafka message using the existing kafka module."""
-    from ..api.kafka import ProduceInput, _produce_message
+    try:
+        from ..api.kafka import ProduceInput, _produce_message
+    except ImportError:
+        return StepResult(
+            step_name=step.name,
+            step_type="kafka_produce",
+            status="error",
+            duration_ms=0.0,
+            error="kafka_produce steps are not supported in the FE edition",
+        )
 
     kp: KafkaProduceStep = step.kafka_produce  # type: ignore[assignment]
     t0 = time.monotonic()
@@ -339,7 +357,16 @@ async def _execute_kafka_consume_assert_step(
     import asyncio
     import json
 
-    from aiokafka import AIOKafkaConsumer
+    try:
+        from aiokafka import AIOKafkaConsumer
+    except ImportError:
+        return StepResult(
+            step_name=step.name,
+            step_type="kafka_consume_assert",
+            status="error",
+            duration_ms=0.0,
+            error="kafka_consume_assert steps are not supported in the FE edition",
+        )
 
     kc: KafkaConsumeAssertStep = step.kafka_consume_assert  # type: ignore[assignment]
     t0 = time.monotonic()

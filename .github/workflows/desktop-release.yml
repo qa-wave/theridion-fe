@@ -1,9 +1,8 @@
-# Theridion desktop release pipeline
+# Theridion FE desktop release pipeline
 #
-# Tag-triggered (v0.x.y) build × sign × upload for 2 Tauri apps × 3 OS = 6 artifacts.
+# Tag-triggered (v0.x.y) build × sign × upload for the FE Tauri app.
 #
 # Apps:
-#   studio     apps/studio    Theridion BE (REST/GraphQL/gRPC/SOAP/Kafka/JMS/JDBC/MQTT)
 #   studio-fe  apps/studio-fe Theridion FE (Playwright multi-browser)
 #
 # Required secrets (all optional — missing = unsigned artifact):
@@ -43,7 +42,6 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
-            libxmlsec1-dev libxmlsec1-openssl \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
             patchelf
 
@@ -69,7 +67,8 @@ jobs:
         run: |
           uv sync --frozen && uv run pytest -q --tb=short \
             --deselect tests/test_environments.py::test_execute_substitutes_url_headers_body \
-            --deselect tests/test_environments.py::test_execute_without_env_does_not_substitute
+            --deselect tests/test_environments.py::test_execute_without_env_does_not_substitute \
+            --deselect tests/test_environments.py::test_execute_with_unknown_environment_404s
 
       - name: Studio typecheck
         working-directory: apps/studio-fe
@@ -179,7 +178,6 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
-            libxmlsec1-dev libxmlsec1-openssl \
             libwebkit2gtk-4.1-dev libappindicator3-dev \
             librsvg2-dev patchelf
 

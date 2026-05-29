@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import time
 from typing import Literal
+from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/security", tags=["owasp-scanner"])
@@ -25,6 +26,7 @@ class OWASPScanInput(BaseModel):
     scan_types: list[ScanType] = Field(
         default_factory=lambda: ["sql_injection", "xss", "auth_bypass", "rate_limit"],
     )
+    ignore_tls_errors: bool = False
 
 
 class Finding(BaseModel):
@@ -253,11 +255,20 @@ def _compute_score(findings: list[Finding]) -> int:
 
 @router.post("/owasp-scan", response_model=OWASPScanOutput)
 async def owasp_scan(body: OWASPScanInput) -> OWASPScanOutput:
+    parsed = urlparse(body.url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=400,
+            detail="scan target URL must use http or https scheme",
+        )
+
     t0 = time.monotonic()
     findings: list[Finding] = []
     scan_types_run: list[ScanType] = []
 
-    async with httpx.AsyncClient(verify=False) as client:  # noqa: S501
+    # TLS verification on by default; only disabled when the caller explicitly
+    # opts in via ignore_tls_errors (e.g. scanning a host with a self-signed cert).
+    async with httpx.AsyncClient(verify=not body.ignore_tls_errors) as client:  # noqa: S501
         if "sql_injection" in body.scan_types:
             scan_types_run.append("sql_injection")
             findings.extend(await _scan_sql_injection(client, body))

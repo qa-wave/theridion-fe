@@ -19,6 +19,7 @@ dependencies = [
     "python-multipart>=0.0.28",
     "jsonpath-ng>=1.8.0",
     "lxml>=6.1.0",
+    "pillow>=11.0",
 ]
 
 [dependency-groups]

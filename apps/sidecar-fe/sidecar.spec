@@ -12,7 +12,7 @@ from PyInstaller.utils.hooks import collect_all
 datas = []
 binaries = []
 hiddenimports = []
-for pkg in ("fastapi", "uvicorn", "pydantic", "lxml", "httpx"):
+for pkg in ("fastapi", "uvicorn", "pydantic", "lxml", "httpx", "PIL"):
     pkg_datas, pkg_bins, pkg_hidden = collect_all(pkg)
     datas += pkg_datas
     binaries += pkg_bins

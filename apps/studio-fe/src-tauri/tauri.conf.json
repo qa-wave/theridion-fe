@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src http://127.0.0.1:* http://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net ws://127.0.0.1:* ws://localhost:*; worker-src blob:"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src http://127.0.0.1:* http://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com ws://127.0.0.1:* ws://localhost:*; worker-src blob:"
     }
   },
   "bundle": {
@@ -45,7 +45,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/qa-wave/theridion/releases/latest/download/latest-fe.json"
+        "https://github.com/qa-wave/theridion-fe/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFGODMzNkMyOTVFN0M4RDYKUldUV3lPZVZ3amFESDR2OCtpYm1VRnRQYVZWdGdrN2xYOXJ3K2lHRllTK1ZZQ29kTVpveC8wb0UK"
     }

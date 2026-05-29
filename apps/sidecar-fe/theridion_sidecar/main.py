@@ -62,7 +62,7 @@ class _TokenAuthMiddleware(BaseHTTPMiddleware):
         if request.url.path in _EXEMPT_PATHS:
             return await call_next(request)
         provided = request.headers.get("X-Theridion-Token", "")
-        if provided != _SIDECAR_TOKEN:
+        if not provided or not secrets.compare_digest(provided, _SIDECAR_TOKEN):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "invalid or missing X-Theridion-Token"},
@@ -88,6 +88,9 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
     finally:
         await app.state.http_client.aclose()
+        from theridion_sidecar.api.silk import shutdown_codegen_procs
+
+        await shutdown_codegen_procs()
 
 
 def _token_file_path() -> Path:

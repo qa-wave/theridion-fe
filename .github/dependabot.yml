@@ -23,9 +23,9 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
-  # ─── Hub (apps/hub) — npm / pnpm ──────────────────────────────────────────
+  # ─── Studio FE (apps/studio-fe) — npm / pnpm ──────────────────────────────
   - package-ecosystem: "npm"
-    directory: "/apps/hub"
+    directory: "/apps/studio-fe"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -33,51 +33,21 @@ updates:
       timezone: "Europe/Prague"
     labels:
       - "dependencies"
-      - "hub"
+      - "studio-fe"
       - "javascript"
     commit-message:
-      prefix: "deps(hub)"
+      prefix: "deps(studio-fe)"
     groups:
-      hub-security:
+      studio-fe-security:
         applies-to: security-updates
         patterns: ["*"]
-      hub-next:
-        patterns: ["next", "react", "react-dom", "@types/react", "@types/react-dom"]
-        update-types: ["minor", "patch"]
-      hub-dev:
-        applies-to: version-updates
-        dependency-type: "development"
-        update-types: ["minor", "patch"]
-    ignore:
-      # Only security updates for major bumps — avoid accidental breaking changes
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  # ─── Studio (apps/studio) — npm / pnpm ────────────────────────────────────
-  - package-ecosystem: "npm"
-    directory: "/apps/studio"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "Europe/Prague"
-    labels:
-      - "dependencies"
-      - "studio"
-      - "javascript"
-    commit-message:
-      prefix: "deps(studio)"
-    groups:
-      studio-security:
-        applies-to: security-updates
-        patterns: ["*"]
-      studio-tauri:
+      studio-fe-tauri:
         patterns: ["@tauri-apps/*"]
         update-types: ["minor", "patch"]
-      studio-react:
+      studio-fe-react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
         update-types: ["minor", "patch"]
-      studio-dev:
+      studio-fe-dev:
         applies-to: version-updates
         dependency-type: "development"
         update-types: ["minor", "patch"]
@@ -85,9 +55,9 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # ─── Sidecar (apps/sidecar) — pip ─────────────────────────────────────────
+  # ─── Sidecar FE (apps/sidecar-fe) — pip ───────────────────────────────────
   - package-ecosystem: "pip"
-    directory: "/apps/sidecar"
+    directory: "/apps/sidecar-fe"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -95,52 +65,27 @@ updates:
       timezone: "Europe/Prague"
     labels:
       - "dependencies"
-      - "sidecar"
+      - "sidecar-fe"
       - "python"
     commit-message:
-      prefix: "deps(sidecar)"
+      prefix: "deps(sidecar-fe)"
     groups:
-      sidecar-security:
+      sidecar-fe-security:
         applies-to: security-updates
         patterns: ["*"]
-      sidecar-fastapi:
+      sidecar-fe-fastapi:
         patterns: ["fastapi", "pydantic", "uvicorn", "httpx"]
         update-types: ["minor", "patch"]
-      sidecar-all-patch:
+      sidecar-fe-all-patch:
         applies-to: version-updates
         update-types: ["patch"]
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # ─── Runner (apps/runner) — pip ───────────────────────────────────────────
-  - package-ecosystem: "pip"
-    directory: "/apps/runner"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "Europe/Prague"
-    labels:
-      - "dependencies"
-      - "runner"
-      - "python"
-    commit-message:
-      prefix: "deps(runner)"
-    groups:
-      runner-security:
-        applies-to: security-updates
-        patterns: ["*"]
-      runner-all-patch:
-        applies-to: version-updates
-        update-types: ["patch"]
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  # ─── Cargo (apps/studio/src-tauri) ────────────────────────────────────────
+  # ─── Cargo (apps/studio-fe/src-tauri) ─────────────────────────────────────
   - package-ecosystem: "cargo"
-    directory: "/apps/studio/src-tauri"
+    directory: "/apps/studio-fe/src-tauri"
     schedule:
       interval: "weekly"
       day: "monday"

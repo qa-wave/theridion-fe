@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -31,6 +32,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import AsyncGenerator
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
@@ -49,6 +51,26 @@ _SILK_DIR_NAME = "silk"
 
 # Registry of active codegen subprocesses keyed by session_id
 _codegen_procs: dict[str, asyncio.subprocess.Process] = {}
+
+
+async def shutdown_codegen_procs() -> None:
+    """Kill any codegen subprocesses still running at sidecar shutdown.
+
+    Called from the FastAPI lifespan teardown so an abrupt exit doesn't leak
+    orphaned ``playwright codegen`` browser processes.
+    """
+    while _codegen_procs:
+        _session_id, proc = _codegen_procs.popitem()
+        if proc.returncode is not None:
+            continue
+        try:
+            proc.terminate()
+            await asyncio.wait_for(proc.wait(), timeout=5.0)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
 
 
 def _silk_dir() -> Path:
@@ -402,10 +424,19 @@ test.beforeEach(async ({{ page }}) => {{
 
 // ---- Original spec follows ----
 """
-    # Strip existing imports from original to avoid duplicate
+    # Strip only the '@playwright/test' import (re-declared by the wrapper above)
+    # so user imports of other modules are preserved.
     lines = original_code.splitlines()
-    filtered = [l for l in lines if not l.strip().startswith("import {")]
+    filtered = [l for l in lines if not _is_playwright_test_import(l)]
     return wrapper + "\n".join(filtered)
+
+
+def _is_playwright_test_import(line: str) -> bool:
+    """True if *line* is an import statement sourced from '@playwright/test'."""
+    stripped = line.strip()
+    if not stripped.startswith("import "):
+        return False
+    return "'@playwright/test'" in stripped or '"@playwright/test"' in stripped
 
 
 def _build_a11y_wrapper(original_code: str) -> str:
@@ -695,8 +726,13 @@ def get_trace(run_id: str) -> FileResponse:
 @router.post("/screenshot-diff", response_model=ScreenshotDiffOutput)
 def screenshot_diff(body: ScreenshotDiffInput) -> ScreenshotDiffOutput:
     """Compute a pixel diff between two PNG images using Pillow ImageChops."""
-    baseline_p = Path(body.baseline_path)
-    current_p = Path(body.current_path)
+    from .ws_security import _safe_resolve_path
+
+    try:
+        baseline_p = _safe_resolve_path(body.baseline_path)
+        current_p = _safe_resolve_path(body.current_path)
+    except ValueError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
 
     for p in (baseline_p, current_p):
         if not p.exists():
@@ -809,7 +845,10 @@ test('reproduce {body.request_id}', async ({{ request }}) => {{
         out_dir = _silk_dir() / "auto-generated"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    spec_path = out_dir / f"{body.request_id}.spec.ts"
+    safe_id = re.sub(r"[^a-zA-Z0-9_\-]", "_", body.request_id)
+    if not safe_id:
+        raise HTTPException(400, detail="request_id is empty or invalid")
+    spec_path = out_dir / f"{safe_id}.spec.ts"
     spec_path.write_text(spec_code, encoding="utf-8")
 
     return AutoSpecOutput(spec_path=str(spec_path), spec_code=spec_code)
@@ -828,6 +867,9 @@ async def record_start(body: RecordStartInput) -> RecordStartOutput:
     to receive the generated spec lines in real-time, then POST
     /api/silk/record/stop to finalize.
     """
+    if urlparse(body.url).scheme not in ("http", "https"):
+        raise HTTPException(400, detail="record URL must use http or https scheme")
+
     npx = _node_bin("npx")
     if not npx:
         raise HTTPException(400, detail="npx not found — install Node.js 18+")

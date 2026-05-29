@@ -65,7 +65,12 @@ def query_rows(
     max_rows: int = 1000,
 ) -> list[dict[str, Any]]:
     """Execute arbitrary SELECT and return list of dicts."""
-    from ..api.jdbc_query import _run_sqlite, _run_postgres
+    try:
+        from ..api.jdbc_query import _run_sqlite, _run_postgres
+    except ImportError as exc:
+        raise RuntimeError(
+            "database snapshot/compare steps are not supported in the FE edition"
+        ) from exc
 
     cs_lower = connection_string.lower()
     if "sqlite" in cs_lower or cs_lower.endswith(".db"):
