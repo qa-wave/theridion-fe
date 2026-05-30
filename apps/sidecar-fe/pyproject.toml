@@ -1,7 +1,7 @@
 [project]
 name = "theridion-sidecar-fe"
 version = "0.1.0"
-description = "Theridion FE Python sidecar — Playwright runner orchestration"
+description = "Theridion Eyes Python sidecar — Playwright runner orchestration"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [

@@ -1,4 +1,4 @@
-# Theridion FE — doména
+# Theridion Eyes — doména
 
 ## Co řešíme
 
@@ -9,7 +9,7 @@ přepsat test) a publikovat výsledky do týmového dashboardu.
 ## Proč ne Playwright samotný
 
 Playwright je výborný, ale uzamyká tě v jeho ekosystému. Spousty teams má existující
-Cypress / Selenium / WebdriverIO suites a nechce je přepisovat. Theridion FE adapter
+Cypress / Selenium / WebdriverIO suites a nechce je přepisovat. Theridion Eyes adapter
 normalizuje assertion DSL napříč backendy — uživatel napíše scénář jednou, vybere
 runtime na úrovni run config.
 

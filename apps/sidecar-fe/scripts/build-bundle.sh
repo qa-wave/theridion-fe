@@ -3,7 +3,7 @@
 # /src-tauri/binaries under the platform-specific name Tauri's externalBin
 # resolver expects.
 #
-# Local dev:  pnpm --filter theridion-fe sidecar:bundle
+# Local dev:  pnpm --filter theridion-eyes sidecar:bundle
 # CI:         called from the desktop matrix job before `tauri build`.
 set -euo pipefail
 

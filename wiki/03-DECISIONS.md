@@ -1,4 +1,4 @@
-# Theridion FE — ADR index
+# Theridion Eyes — ADR index
 
 ## ADR-001 — Multi-framework adapter, ne Playwright-only
 **Stav:** Accepted
@@ -32,7 +32,7 @@
 **Kontext:** Playwright bundling = +200 MB, browsers další ~500 MB. Nelze rozumně shipovat ve V1.
 **Rozhodnutí:** Sidecar volá `npx playwright …` jako subprocess. Browsers se instalují on-demand přes Settings dialog.
 **Důsledky:**
-- ✅ Theridion FE bundle zůstává ~30 MB
+- ✅ Theridion Eyes bundle zůstává ~30 MB
 - ✅ Users mohou používat globálně nainstalovaný Playwright / Cypress
 - ❌ First run UX — uživatel musí mít node nainstalovaný + browsers download
 

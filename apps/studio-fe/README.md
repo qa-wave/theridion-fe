@@ -1,4 +1,4 @@
-# Theridion FE
+# Theridion Eyes
 
 Frontend automation desktop app — multi-framework runner with built-in recorder, visual
 regression, accessibility audit (axe-core), network interception. One file-based workspace,

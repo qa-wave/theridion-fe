@@ -4,15 +4,15 @@
 
 ### Added — desktop product split
 
-- **Theridion BE** (`apps/studio`) — rebranded from "Theridion Studio".
-  Identifier `com.theridion.be`. Full backend & integration testing surface:
+- **Theridion Net** (`apps/studio`) — rebranded from "Theridion Studio".
+  Identifier `com.theridion.net`. Full backend & integration testing surface:
   REST, GraphQL, gRPC, SOAP/WS-Security, Kafka, JMS, JDBC, MQTT.
-- **Theridion FE** (`apps/studio-fe`, NEW) — separate Tauri desktop product
-  for Playwright frontend automation. Identifier `com.theridion.fe`.
+- **Theridion Eyes** (`apps/studio-fe`, NEW) — separate Tauri desktop product
+  for Playwright frontend automation. Identifier `com.theridion.eyes`.
   Distinct dev port (1430), distinct pid+token files so both apps can run
   side-by-side. ActivityBar reduced to 3 modes (silk / monitors / hubOverview)
   with violet accent.
-- **Theridion FE sidecar** (`apps/sidecar-fe`, NEW) — slimmed Python sidecar.
+- **Theridion Eyes sidecar** (`apps/sidecar-fe`, NEW) — slimmed Python sidecar.
   Drops grpcio + zeep/xmlsec + aiokafka + paho-mqtt + psycopg2 + stomp-py
   (~20 MB savings). Bundle target ~30 MB. Only registers health, diagnostics,
   environments, history, silk routers.

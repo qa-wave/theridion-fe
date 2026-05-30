@@ -2,7 +2,7 @@
 
 > Konsolidace 40 bodů na zlepšení napříč **Studio FE**, **Studio BE**, **Hub** a **Runner**.
 > Detailní implementační kroky, soubory a rizika jsou v `docs/improvements-plan.md` v každém z repozitářů
-> (`theridion-fe`, `theridion-be`, `theridion-hub`, `theridion-runner`).
+> (`theridion-eyes`, `theridion-net`, `theridion-hub`, `theridion-runner`).
 >
 > Tento dokument je **sekvenční roadmap** — řadí body napříč všemi aplikacemi do 4 vln
 > podle pravidla **bezpečnost → korektnost/důvěra → architektura → UX/polish**.

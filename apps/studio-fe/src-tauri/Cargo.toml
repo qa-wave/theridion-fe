@@ -1,7 +1,7 @@
 [package]
-name = "theridion-fe"
+name = "theridion-eyes"
 version = "0.0.1"
-description = "Theridion FE — frontend automation desktop app"
+description = "Theridion Eyes — frontend automation desktop app"
 authors = ["Tomáš Mertin <tomas.mertin@gmail.com>"]
 edition = "2021"
 rust-version = "1.77"

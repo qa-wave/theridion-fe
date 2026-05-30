@@ -1,10 +1,10 @@
-# Theridion FE — runbook
+# Theridion Eyes — runbook
 
 ## First-time setup
 
 ```bash
-git clone git@github.com:qa-wave/theridion-fe.git
-cd theridion-fe/apps/studio-fe
+git clone git@github.com:qa-wave/theridion-eyes.git
+cd theridion-eyes/apps/studio-fe
 pnpm install
 pnpm sidecar:bundle          # builds slim ~30 MB PyInstaller bundle
 pnpm tauri:dev               # opens window (port 1430)
@@ -39,7 +39,7 @@ Stejný flow jako BE:
 
 ### "browsers not installed" při Silk runu
 
-V Theridion FE UI: Settings → Tool integrations → Install Playwright browsers.
+V Theridion Eyes UI: Settings → Tool integrations → Install Playwright browsers.
 Nebo manually: `npx playwright install chromium firefox webkit`.
 
 ### Sidecar nestartuje (BE pid file conflict)
@@ -61,10 +61,10 @@ Adapter status:
 Stejný issue jako BE — `TAURI_SIGNING_PRIVATE_KEY` musí být raw content `.key`:
 
 ```bash
-cat ~/.tauri/theridion-fe.update.key | gh secret set TAURI_SIGNING_PRIVATE_KEY --repo qa-wave/theridion-fe
+cat ~/.tauri/theridion-eyes.update.key | gh secret set TAURI_SIGNING_PRIVATE_KEY --repo qa-wave/theridion-eyes
 ```
 
 ## Příbuzné runbooks
 
-- [theridion-be runbook](../../theridion-be/wiki/04-RUNBOOK.md)
+- [theridion-net runbook](../../theridion-net/wiki/04-RUNBOOK.md)
 - [theridion-hub runbook](../../theridion-hub/wiki/04-RUNBOOK.md)

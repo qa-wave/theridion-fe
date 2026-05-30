@@ -2,9 +2,9 @@
 
 | Klíč | Hodnota |
 |---|---|
-| **Name** | `theridion-fe` |
+| **Name** | `theridion-eyes` |
 | **Group** | `qa-tooling` |
-| **GitHub** | [qa-wave/theridion-fe](https://github.com/qa-wave/theridion-fe) |
+| **GitHub** | [qa-wave/theridion-eyes](https://github.com/qa-wave/theridion-eyes) |
 | **Type** | Desktop (Tauri 2.11) — distributed Win/macOS/Linux binárka |
 
 ## Session start
@@ -16,7 +16,7 @@
 
 ---
 
-# Theridion FE — kontext
+# Theridion Eyes — kontext
 
 Frontend automation desktop app — multi-framework runner s built-in recorderem.
 
@@ -33,11 +33,11 @@ Frontend automation desktop app — multi-framework runner s built-in recorderem
 ## Layout
 
 ```
-theridion-fe/
+theridion-eyes/
 ├── apps/
 │   ├── studio-fe/         Tauri shell + React/TS frontend (port 1430)
 │   │   ├── src/           SilkPanel, ActivityBar, HubOverviewPanel
-│   │   ├── src-tauri/     Rust shell (com.theridion.fe)
+│   │   ├── src-tauri/     Rust shell (com.theridion.eyes)
 │   │   └── tests/e2e/
 │   └── sidecar-fe/        Slim Python sidecar — silk + health + env + history
 │       └── theridion_sidecar/  routers (Playwright orchestration only)
@@ -57,7 +57,7 @@ cd apps/studio-fe && pnpm tauri:dev
 
 ## Příbuzné projekty
 
-- **theridion-be** — sourozenecký projekt pro BE testing
+- **theridion-net** — sourozenecký projekt pro Net (BE/integration) testing
 - **theridion-hub** — agreguje Silk run history přes Runner ingest
 
 ---

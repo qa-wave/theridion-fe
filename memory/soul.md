@@ -1,4 +1,4 @@
-# Theridion FE — identita
+# Theridion Eyes — identita
 
 Frontend automation desktop app — multi-framework runner s built-in recorderem. **Co děláme**: necháváme uživatele zvolit Playwright / Cypress / Selenium / WebdriverIO / Puppeteer a publikovat výsledky do Hub.
 

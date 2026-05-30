@@ -1,4 +1,4 @@
-"""Theridion FE sidecar entrypoint.
+"""Theridion Eyes sidecar entrypoint.
 
 Slim FastAPI sidecar — only routers needed for Playwright (Silk) frontend
 testing. Keeps the same dynamic-port handshake, auth-token middleware, CORS
@@ -114,7 +114,7 @@ def _write_token_file(token: str) -> None:
 def create_app() -> FastAPI:
     _debug = bool(os.getenv("THERIDION_DEBUG"))
     app = FastAPI(
-        title="Theridion FE sidecar",
+        title="Theridion Eyes sidecar",
         version=__version__,
         docs_url="/docs" if _debug else None,
         redoc_url="/redoc" if _debug else None,

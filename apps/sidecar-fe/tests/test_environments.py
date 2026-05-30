@@ -2,7 +2,7 @@
 
 Request execution (/api/requests/execute) lives in the BE sidecar — the slim
 FE sidecar deliberately omits that router (see main.create_app), so those
-integration tests belong to theridion-be, not here.
+integration tests belong to theridion-net, not here.
 """
 
 from __future__ import annotations

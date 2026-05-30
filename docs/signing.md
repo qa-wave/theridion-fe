@@ -1,4 +1,4 @@
-# Code signing — Theridion FE
+# Code signing — Theridion Eyes
 
 Unsigned builds work on all platforms but trigger OS warnings:
 - **macOS** — Gatekeeper blocks "unidentified developer" apps
@@ -16,10 +16,10 @@ For production releases users actually install without friction, you need:
 
 ## Tauri updater key (already configured)
 
-Generated locally via `pnpm dlx @tauri-apps/cli signer generate -w ~/.tauri/theridion-fe.update.key`.
+Generated locally via `pnpm dlx @tauri-apps/cli signer generate -w ~/.tauri/theridion-eyes.update.key`.
 
 - Public key — embedded in `src-tauri/tauri.conf.json` `plugins.updater.pubkey`
-- Private key — `~/.tauri/theridion-fe.update.key` (gitignored)
+- Private key — `~/.tauri/theridion-eyes.update.key` (gitignored)
 - GitHub secret `TAURI_SIGNING_PRIVATE_KEY` = base64 of private key file
 - GitHub secret `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` = empty (no passphrase)
 
@@ -36,18 +36,18 @@ the update — without them Tauri refuses the download. Already enabled in CI.
 6. In Keychain Access (login keychain), right-click your "Developer ID Application: …" identity → Export → save as `.p12` with password
 7. Set GitHub secrets:
    ```bash
-   gh secret set APPLE_CERTIFICATE --repo qa-wave/theridion-fe < <(base64 -i developer-id.p12)
-   gh secret set APPLE_CERTIFICATE_PASSWORD --repo qa-wave/theridion-fe
-   gh secret set APPLE_SIGNING_IDENTITY --repo qa-wave/theridion-fe  # e.g. "Developer ID Application: Tomáš Mertin (TEAMID12)"
+   gh secret set APPLE_CERTIFICATE --repo qa-wave/theridion-eyes < <(base64 -i developer-id.p12)
+   gh secret set APPLE_CERTIFICATE_PASSWORD --repo qa-wave/theridion-eyes
+   gh secret set APPLE_SIGNING_IDENTITY --repo qa-wave/theridion-eyes  # e.g. "Developer ID Application: Tomáš Mertin (TEAMID12)"
    ```
 
 8. For notarization (required for distribution outside App Store):
    - Generate **app-specific password** at https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords → "Theridion notarize"
    - Find your **Team ID** at https://developer.apple.com/account → Membership Details
    ```bash
-   gh secret set APPLE_ID --repo qa-wave/theridion-fe             # your Apple ID email
-   gh secret set APPLE_PASSWORD --repo qa-wave/theridion-fe       # the app-specific password
-   gh secret set APPLE_TEAM_ID --repo qa-wave/theridion-fe        # 10-char Team ID
+   gh secret set APPLE_ID --repo qa-wave/theridion-eyes             # your Apple ID email
+   gh secret set APPLE_PASSWORD --repo qa-wave/theridion-eyes       # the app-specific password
+   gh secret set APPLE_TEAM_ID --repo qa-wave/theridion-eyes        # 10-char Team ID
    ```
 
 After secrets are set, the next `v*.*.*` tag push will produce signed + notarized `.dmg` artifacts.
@@ -61,8 +61,8 @@ Cheapest path (OV cert from SSL.com via Azure Trusted Signing):
 3. Receive `.pfx` via secure download
 4. Set GitHub secrets:
    ```bash
-   base64 -i theridion-fe.pfx | tr -d '\n' | gh secret set WINDOWS_CERTIFICATE_PFX_BASE64 --repo qa-wave/theridion-fe
-   gh secret set WINDOWS_CERTIFICATE_PASSWORD --repo qa-wave/theridion-fe
+   base64 -i theridion-eyes.pfx | tr -d '\n' | gh secret set WINDOWS_CERTIFICATE_PFX_BASE64 --repo qa-wave/theridion-eyes
+   gh secret set WINDOWS_CERTIFICATE_PASSWORD --repo qa-wave/theridion-eyes
    ```
 
 After secrets are set, `.msi` artifacts will be Authenticode-signed automatically.
@@ -80,7 +80,7 @@ codesign --verify --deep --verbose=2 /Applications/Theridion\ BE.app
 spctl --assess --type execute --verbose=4 /Applications/Theridion\ BE.app
 
 # Windows — verify signature (PowerShell)
-Get-AuthenticodeSignature "C:\Program Files\Theridion FE\theridion-fe.exe"
+Get-AuthenticodeSignature "C:\Program Files\Theridion Eyes\theridion-eyes.exe"
 
 # Linux — verify checksum from GitHub Release SHA256SUMS
 sha256sum --check SHA256SUMS

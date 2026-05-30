@@ -1,8 +1,8 @@
-# Theridion FE — architektura
+# Theridion Eyes — architektura
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Tauri 2.11 shell (Rust, ~5 MB) — com.theridion.fe             │
+│  Tauri 2.11 shell (Rust, ~5 MB) — com.theridion.eyes     │
 │  ├── src-tauri/src/lib.rs                                      │
 │  └── WebView                                                   │
 │       │                                                        │
@@ -31,11 +31,11 @@
                   └──────────────────────────────┘
 ```
 
-## Co je jinak vs Theridion BE
+## Co je jinak vs Theridion Net
 
-| | BE | FE |
+| | Net | Eyes |
 |---|---|---|
-| Identifier | com.theridion.be | com.theridion.fe |
+| Identifier | com.theridion.net | com.theridion.eyes |
 | Dev port | 1420 | 1430 |
 | Sidecar deps | grpcio + zeep + kafka + jdbc + mqtt + stomp (full) | slim — fastapi + httpx + pydantic + lxml + jsonpath |
 | Bundle size | ~46 MB | ~30 MB target |
