@@ -53,6 +53,12 @@ export interface SilkRunInput {
   mocks?: SilkMockRule[];
   /** Inject axe-core a11y audit after each navigation. */
   run_accessibility_audit?: boolean;
+  /**
+   * Optional ranked-candidate locator map from a previous recording.
+   * When provided the spec is wrapped with a self-healing helper that falls
+   * back through candidates when the primary locator fails.
+   */
+  locator_map?: Record<string, SilkElementLocators>;
 }
 
 export interface SilkRunOutput {
@@ -67,6 +73,8 @@ export interface SilkRunOutput {
   stderr_tail: string;
   per_browser_results: Record<string, SilkBrowserRunResult>;
   a11y_violations: SilkA11yViolation[];
+  /** Self-healing locator substitutions that occurred during this run. */
+  healed_locators: SilkHealedLocatorEvent[];
 }
 
 export interface SilkInstallBrowsersResponse {
@@ -79,6 +87,14 @@ export interface SilkScreenshotDiffInput {
   baseline_path: string;
   current_path: string;
   threshold?: number;
+  /** Rectangular areas to exclude from the pixel diff (timestamps, ads, etc.). */
+  ignore_regions?: SilkIgnoreRegion[];
+  /**
+   * Anti-aliasing tolerance [0–1].  Pixels whose 3×3 neighbourhood max-channel
+   * variance is below this fraction are treated as AA edge pixels and ignored.
+   * 0 = strict (default), 0.1 = light suppression.
+   */
+  anti_alias_tolerance?: number;
 }
 
 export interface SilkScreenshotDiffOutput {
@@ -87,6 +103,8 @@ export interface SilkScreenshotDiffOutput {
   total_pixels: number;
   diff_ratio: number;
   passed: boolean;
+  /** Number of pixels excluded from the diff (ignore_regions + AA suppression). */
+  ignored_pixels: number;
 }
 
 export interface SilkAutoSpecInput {
@@ -150,6 +168,8 @@ export interface SilkRecordStopOutput {
   session_id: string;
   spec_text: string;
   spec_path: string | null;
+  /** Ranked locator candidates extracted from the recorded spec (per primary selector). */
+  locators: Record<string, SilkElementLocators>;
 }
 
 // ---- Baseline management ----
@@ -174,6 +194,10 @@ export interface SilkBaselineCompareInput {
   browser?: string;
   viewport?: string;
   threshold?: number;
+  /** Rectangular areas to exclude from the pixel diff. */
+  ignore_regions?: SilkIgnoreRegion[];
+  /** Anti-aliasing tolerance [0–1]. 0 = strict (default). */
+  anti_alias_tolerance?: number;
 }
 
 export interface SilkBaselineCompareOutput {
@@ -184,6 +208,8 @@ export interface SilkBaselineCompareOutput {
   diff_ratio: number;
   passed: boolean;
   approved: boolean;
+  /** Number of pixels excluded from the diff (ignore_regions + AA suppression). */
+  ignored_pixels: number;
 }
 
 export interface SilkBaselineApproveInput {
@@ -220,6 +246,38 @@ export interface SilkRecordSaveAndRunInput {
 export interface SilkRecordSaveAndRunOutput {
   spec_path: string;
   run: SilkRunOutput;
+}
+
+// ---- Self-healing locators ----
+
+export interface SilkLocatorCandidate {
+  priority: number;
+  strategy: string;
+  selector: string;
+}
+
+export interface SilkElementLocators {
+  primary: SilkLocatorCandidate;
+  candidates: SilkLocatorCandidate[];
+}
+
+/** One self-healing substitution event emitted during a run. */
+export interface SilkHealedLocatorEvent {
+  /** Original primary selector that failed. */
+  primary: string;
+  /** Fallback selector that succeeded. */
+  healed: string;
+  /** Strategy of the healed selector (e.g. "text", "css"). */
+  strategy: string;
+}
+
+// ---- Ignore regions for visual diff ----
+
+export interface SilkIgnoreRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 // ---- Attachment data (parsed from json_report) ----

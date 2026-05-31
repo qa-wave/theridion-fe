@@ -1469,3 +1469,467 @@ async def test_publish_run_result_v2_payload_shape(
     assert payload["passed"] == 2
     assert payload["failed"] == 0
     assert isinstance(payload["requests"], list)
+
+
+# ===========================================================================
+# Phase 7 — Self-healing locators
+# ===========================================================================
+
+
+class TestSilkLocatorsUnit:
+    """Unit tests for the silk_locators module (pure functions, no I/O)."""
+
+    def test_extract_candidates_testid_produces_primary_and_css_fallback(self) -> None:
+        """getByTestId produces test-id primary + CSS fallback."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByTestId('submit-btn')")
+        assert el.primary.strategy == "test-id"
+        assert el.primary.priority == 1
+        # Should have a CSS fallback at minimum
+        strategies = {c.strategy for c in el.candidates}
+        assert "css" in strategies
+
+    def test_extract_candidates_role_name_produces_text_css_xpath(self) -> None:
+        """getByRole with name produces role primary + text/css/xpath fallbacks."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByRole('button', { name: 'Submit' })")
+        assert el.primary.strategy == "role"
+        strats = {c.strategy for c in el.candidates}
+        # text and/or css fallbacks expected
+        assert strats & {"text", "css", "xpath"}
+
+    def test_extract_candidates_text_produces_xpath_fallback(self) -> None:
+        """getByText produces text primary + xpath fallback."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByText('Sign in')")
+        assert el.primary.strategy == "text"
+        strats = {c.strategy for c in el.candidates}
+        assert "xpath" in strats
+
+    def test_extract_candidates_label(self) -> None:
+        """getByLabel produces label primary + css and text fallbacks."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByLabel('Email address')")
+        assert el.primary.strategy == "label"
+        strats = {c.strategy for c in el.candidates}
+        assert strats & {"css", "text"}
+
+    def test_extract_candidates_no_duplicates(self) -> None:
+        """Returned candidates have no duplicate selectors."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByRole('button', { name: 'Login' })")
+        all_sels = [el.primary.selector] + [c.selector for c in el.candidates]
+        assert len(all_sels) == len(set(all_sels))
+
+    def test_all_ranked_sorted_by_priority(self) -> None:
+        """all_ranked returns candidates in ascending priority order."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("getByRole('button', { name: 'OK' })")
+        ranked = el.all_ranked
+        priorities = [c.priority for c in ranked]
+        assert priorities == sorted(priorities)
+
+    def test_extract_candidates_unknown_locator_fallback(self) -> None:
+        """Unrecognised selector expression falls back gracefully."""
+        from theridion_sidecar.silk_locators import extract_candidates
+
+        el = extract_candidates("locator('.my-weird-selector > span')")
+        assert el.primary.strategy in ("css", "xpath")
+        # Should not raise
+
+    def test_extract_locators_from_spec_non_empty(self) -> None:
+        """_extract_locators_from_spec returns a map for a real-looking spec."""
+        from theridion_sidecar.api.silk import _extract_locators_from_spec
+
+        spec = """
+import { test, expect } from '@playwright/test';
+
+test('login', async ({ page }) => {
+  await page.goto('https://example.com/login');
+  await page.getByLabel('Username').fill('alice');
+  await page.getByLabel('Password').fill('secret');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByTestId('welcome-banner')).toBeVisible();
+});
+"""
+        locators = _extract_locators_from_spec(spec)
+        assert len(locators) > 0
+        # The role+name selector should be present
+        keys = set(locators.keys())
+        assert any("getByLabel" in k for k in keys)
+        assert any("getByRole" in k for k in keys)
+        assert any("getByTestId" in k for k in keys)
+
+    def test_extract_locators_from_spec_empty_for_goto_only(self) -> None:
+        """A spec with only goto (no element actions) returns empty locator map."""
+        from theridion_sidecar.api.silk import _extract_locators_from_spec
+
+        spec = "await page.goto('https://example.com');"
+        locators = _extract_locators_from_spec(spec)
+        # goto has no selector so map should be empty
+        assert locators == {}
+
+    def test_record_stop_returns_locators_field(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """record_stop returns a locators dict even for an empty spec."""
+        import asyncio
+        from unittest.mock import MagicMock, patch, AsyncMock
+        from theridion_sidecar.api.silk import _codegen_procs, _codegen_output_files
+
+        session_id = "test-locator-session-001"
+
+        # Write a minimal codegen output file.
+        output_dir = tmp_path / "silk" / "codegen" / session_id
+        output_dir.mkdir(parents=True)
+        spec_file = output_dir / "spec.spec.ts"
+        spec_file.write_text(
+            "await page.goto('https://example.com');\n"
+            "await page.getByRole('button', { name: 'Login' }).click();\n",
+            encoding="utf-8",
+        )
+
+        # Register a fake process (already "stopped").
+        fake_proc = MagicMock()
+        fake_proc.returncode = 0
+        fake_proc.terminate = MagicMock()
+        fake_proc.wait = AsyncMock(return_value=None)
+        _codegen_procs[session_id] = fake_proc
+        _codegen_output_files[session_id] = spec_file
+
+        res = client.post("/api/silk/record/stop", json={"session_id": session_id})
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert "locators" in data
+        # Should have extracted the button selector
+        assert any("getByRole" in k for k in data["locators"].keys())
+
+    def test_run_output_has_healed_locators_field(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """SilkRunOutput always includes healed_locators (empty list by default)."""
+        with patch("shutil.which", return_value="/usr/bin/npx"), \
+             _patch_async_run():
+            res = client.post(
+                "/api/silk/run",
+                json={"inline_code": "test('x', () => {});"},
+            )
+        assert res.status_code == 200
+        data = res.json()
+        assert "healed_locators" in data
+        assert isinstance(data["healed_locators"], list)
+
+    def test_run_with_locator_map_wraps_spec(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """When locator_map is provided the spec is wrapped (temp file contains healing helper)."""
+        written_specs: list[str] = []
+        original_write = Path.write_text
+
+        def patched_write(self: Path, data: str, **kw: object) -> None:  # type: ignore[override]
+            if "wrapped.spec.ts" in str(self):
+                written_specs.append(data)
+            return original_write(self, data, **kw)
+
+        spec = tmp_path / "heal_test.spec.ts"
+        spec.write_text(
+            "await page.getByRole('button', { name: 'Submit' }).click();",
+            encoding="utf-8",
+        )
+
+        with patch("shutil.which", return_value="/usr/bin/npx"), \
+             _patch_async_run(), \
+             patch.object(Path, "write_text", patched_write):
+            res = client.post(
+                "/api/silk/run",
+                json={
+                    "spec_path": str(spec),
+                    "locator_map": {
+                        "getByRole('button', { name: 'Submit' })": {
+                            "primary": {
+                                "priority": 2,
+                                "strategy": "role",
+                                "selector": "getByRole('button', { name: 'Submit' })",
+                            },
+                            "candidates": [
+                                {
+                                    "priority": 5,
+                                    "strategy": "text",
+                                    "selector": "getByText('Submit')",
+                                }
+                            ],
+                        }
+                    },
+                },
+            )
+
+        assert res.status_code == 200
+        # The wrapped spec should contain the healing comment signature
+        assert any("silk" in s.lower() or "heal" in s.lower() or "_tryLocators" in s for s in written_specs), \
+            "Expected self-healing wrapper to be injected into spec"
+
+    def test_parse_healed_events_from_report(self) -> None:
+        """_parse_healed_events extracts healing events from silk-healed.json attachment."""
+        from theridion_sidecar.api.silk import _parse_healed_events
+
+        healed_data = [
+            {"primary": "getByRole('button', { name: 'OK' })", "healed": "getByText('OK')", "strategy": "text"}
+        ]
+        report = {
+            "suites": [
+                {
+                    "specs": [
+                        {"tests": [{"results": [{"attachments": [
+                            {"name": "silk-healed.json", "contentType": "application/json",
+                             "body": json.dumps(healed_data)}
+                        ]}]}]}
+                    ],
+                    "suites": [],
+                }
+            ]
+        }
+        events = _parse_healed_events(report)
+        assert len(events) == 1
+        assert events[0].primary == "getByRole('button', { name: 'OK' })"
+        assert events[0].healed == "getByText('OK')"
+        assert events[0].strategy == "text"
+
+    def test_parse_healed_events_empty_report(self) -> None:
+        """Returns empty list for None report."""
+        from theridion_sidecar.api.silk import _parse_healed_events
+        assert _parse_healed_events(None) == []
+        assert _parse_healed_events({"suites": []}) == []
+
+
+# ===========================================================================
+# Phase 7 — Visual diff: ignore-regions + anti-alias tolerance
+# ===========================================================================
+
+
+class TestVisualDiffIgnoreRegions:
+    """Tests for screenshot-diff and baseline/compare with ignore_regions + anti_alias_tolerance."""
+
+    def test_screenshot_diff_ignore_region_excludes_pixels(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """Differing pixels inside an ignore_region are not counted."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        # Create a 100x100 baseline (all red) and current (red except top-left 20x20 is blue).
+        baseline = Image.new("RGB", (100, 100), color=(255, 0, 0))
+        current = Image.new("RGB", (100, 100), color=(255, 0, 0))
+        # Paste a blue 20x20 patch at (0, 0) in current.
+        blue_patch = Image.new("RGB", (20, 20), color=(0, 0, 255))
+        current.paste(blue_patch, (0, 0))
+
+        b_path = tmp_path / "b.png"
+        c_path = tmp_path / "c.png"
+        baseline.save(str(b_path))
+        current.save(str(c_path))
+
+        # Without ignore region: diff_count > 0
+        res_no_ignore = client.post(
+            "/api/silk/screenshot-diff",
+            json={"baseline_path": str(b_path), "current_path": str(c_path), "threshold": 1.0},
+        )
+        assert res_no_ignore.status_code == 200
+        assert res_no_ignore.json()["pixel_diff_count"] > 0
+
+        # With ignore region covering exactly the blue patch: diff_count == 0
+        res_with_ignore = client.post(
+            "/api/silk/screenshot-diff",
+            json={
+                "baseline_path": str(b_path),
+                "current_path": str(c_path),
+                "threshold": 1.0,
+                "ignore_regions": [{"x": 0, "y": 0, "width": 20, "height": 20}],
+            },
+        )
+        assert res_with_ignore.status_code == 200
+        d = res_with_ignore.json()
+        assert d["pixel_diff_count"] == 0
+        assert d["passed"] is True
+        assert d["ignored_pixels"] == 20 * 20
+
+    def test_screenshot_diff_anti_alias_tolerance_suppresses_edge_noise(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """Anti-alias tolerance suppresses tiny per-pixel noise (single-channel delta)."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        # Create images that are identical except a few pixels with small delta (~5 per channel).
+        baseline = Image.new("RGB", (50, 50), color=(100, 100, 100))
+        current = Image.new("RGB", (50, 50), color=(100, 100, 100))
+        # Add tiny noise to one pixel (delta 5 — below channel threshold 10 so already suppressed by default)
+        # To test AA tolerance with a delta > 10 but small neighbourhood variance, we need a bigger delta
+        # but isolated pixel (no neighbours differ).
+        pixels = current.load()
+        pixels[25, 25] = (115, 115, 115)  # delta = 15 in each channel — above threshold_channel=10
+
+        b_path = tmp_path / "b_aa.png"
+        c_path = tmp_path / "c_aa.png"
+        baseline.save(str(b_path))
+        current.save(str(c_path))
+
+        # Without AA tolerance: the noisy pixel is counted.
+        res_strict = client.post(
+            "/api/silk/screenshot-diff",
+            json={"baseline_path": str(b_path), "current_path": str(c_path), "threshold": 0.0},
+        )
+        assert res_strict.status_code == 200
+        assert res_strict.json()["pixel_diff_count"] == 1
+
+        # With AA tolerance = 0.1 (threshold 25.5 per channel): the isolated pixel
+        # whose neighbourhood max-channel variance is just itself (15/255 ≈ 0.059) should
+        # be suppressed (0.059 < 0.1).
+        res_aa = client.post(
+            "/api/silk/screenshot-diff",
+            json={
+                "baseline_path": str(b_path),
+                "current_path": str(c_path),
+                "threshold": 0.0,
+                "anti_alias_tolerance": 0.1,
+            },
+        )
+        assert res_aa.status_code == 200
+        assert res_aa.json()["pixel_diff_count"] == 0
+        assert res_aa.json()["ignored_pixels"] >= 1
+
+    def test_screenshot_diff_ignore_region_outside_image_clamped(
+        self, client: "TestClient", tmp_path: "Path"
+    ) -> None:
+        """Ignore region that extends beyond image boundaries is silently clamped."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        img = Image.new("RGB", (50, 50), color=(10, 10, 10))
+        p1 = tmp_path / "p1.png"
+        p2 = tmp_path / "p2.png"
+        img.save(str(p1))
+        img.save(str(p2))
+
+        res = client.post(
+            "/api/silk/screenshot-diff",
+            json={
+                "baseline_path": str(p1),
+                "current_path": str(p2),
+                "threshold": 0.1,
+                # Region extends far beyond 50x50
+                "ignore_regions": [{"x": 40, "y": 40, "width": 100, "height": 100}],
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["passed"] is True
+        # ignored_pixels should be clamped to available area (10x10 = 100)
+        assert data["ignored_pixels"] == 100
+
+    def test_baseline_compare_with_ignore_region(
+        self, client: "TestClient", tmp_path: "Path", monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """baseline/compare accepts and applies ignore_regions."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        monkeypatch.setenv("THERIDION_HOME", str(tmp_path))
+
+        # Save a plain red baseline.
+        baseline_img = Image.new("RGB", (80, 80), color=(200, 50, 50))
+        screenshot = tmp_path / "base.png"
+        baseline_img.save(str(screenshot))
+
+        client.post(
+            "/api/silk/baseline/save",
+            json={"screenshot_path": str(screenshot), "test_id": "ir-test", "browser": "chromium", "viewport": "1280x720"},
+        )
+
+        # Current image is same except top-left 10x10 is different.
+        current_img = baseline_img.copy()
+        patch_img = Image.new("RGB", (10, 10), color=(0, 200, 255))
+        current_img.paste(patch_img, (0, 0))
+        current_path = tmp_path / "current.png"
+        current_img.save(str(current_path))
+
+        # Without ignore: should fail.
+        res_no_ignore = client.post(
+            "/api/silk/baseline/compare",
+            json={
+                "current_path": str(current_path),
+                "test_id": "ir-test",
+                "browser": "chromium",
+                "viewport": "1280x720",
+                "threshold": 0.001,
+            },
+        )
+        assert res_no_ignore.status_code == 200
+        assert res_no_ignore.json()["passed"] is False
+
+        # With ignore region covering the patch: should pass.
+        res_ignore = client.post(
+            "/api/silk/baseline/compare",
+            json={
+                "current_path": str(current_path),
+                "test_id": "ir-test",
+                "browser": "chromium",
+                "viewport": "1280x720",
+                "threshold": 0.001,
+                "ignore_regions": [{"x": 0, "y": 0, "width": 10, "height": 10}],
+            },
+        )
+        assert res_ignore.status_code == 200
+        data = res_ignore.json()
+        assert data["pixel_diff_count"] == 0
+        assert data["passed"] is True
+        assert data["ignored_pixels"] == 100
+
+    def test_compute_pixel_diff_unit_no_regions(self) -> None:
+        """_compute_pixel_diff returns correct counts for pure Python call."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        from theridion_sidecar.api.silk import _compute_pixel_diff
+
+        red = Image.new("RGB", (10, 10), color=(255, 0, 0))
+        blue = Image.new("RGB", (10, 10), color=(0, 0, 255))
+
+        diff_count, total, ignored = _compute_pixel_diff(red, blue)
+        assert diff_count == 100
+        assert total == 100
+        assert ignored == 0
+
+    def test_compute_pixel_diff_unit_with_region(self) -> None:
+        """_compute_pixel_diff correctly excludes pixels in ignore region."""
+        try:
+            from PIL import Image
+        except ImportError:
+            pytest.skip("Pillow not installed")
+
+        from theridion_sidecar.api.silk import _compute_pixel_diff, IgnoreRegion
+
+        red = Image.new("RGB", (10, 10), color=(255, 0, 0))
+        blue = Image.new("RGB", (10, 10), color=(0, 0, 255))
+
+        # Ignore top half (10x5 = 50 pixels)
+        regions = [IgnoreRegion(x=0, y=0, width=10, height=5)]
+        diff_count, total, ignored = _compute_pixel_diff(red, blue, ignore_regions=regions)
+        assert total == 100
+        assert ignored == 50
+        assert diff_count == 50  # bottom half still differs

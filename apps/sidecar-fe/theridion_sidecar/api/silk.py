@@ -211,6 +211,14 @@ class SilkRunInput(BaseModel):
         False,
         description="Inject axe-core accessibility check after each navigation.",
     )
+    locator_map: dict[str, ElementLocatorsModel] = Field(
+        default_factory=dict,
+        description=(
+            "Optional map from primary selector → ranked candidates (from a previous "
+            "recording).  When non-empty the spec is wrapped with the self-healing "
+            "locator helper that falls back through candidates and emits healed events."
+        ),
+    )
 
 
 class A11yViolation(BaseModel):
@@ -245,6 +253,23 @@ class SilkRunOutput(BaseModel):
     stderr_tail: str = ""
     per_browser_results: dict[str, BrowserRunResult] = Field(default_factory=dict)
     a11y_violations: list[A11yViolation] = Field(default_factory=list)
+    healed_locators: list["HealedLocatorEvent"] = Field(
+        default_factory=list,
+        description="Locator-healing substitutions that occurred during this run.",
+    )
+
+
+class IgnoreRegion(BaseModel):
+    """A rectangular region to mask out during pixel-diff comparison.
+
+    Coordinates are in pixels relative to the top-left corner of the image.
+    Pixels inside the region are excluded from the diff count entirely.
+    """
+
+    x: int = Field(..., ge=0, description="Left edge (pixels from left).")
+    y: int = Field(..., ge=0, description="Top edge (pixels from top).")
+    width: int = Field(..., gt=0, description="Region width in pixels.")
+    height: int = Field(..., gt=0, description="Region height in pixels.")
 
 
 class ScreenshotDiffInput(BaseModel):
@@ -256,6 +281,20 @@ class ScreenshotDiffInput(BaseModel):
         le=1.0,
         description="Pixel-diff threshold as a fraction of total pixels (0–1).",
     )
+    ignore_regions: list[IgnoreRegion] = Field(
+        default_factory=list,
+        description="Rectangular areas to exclude from diff (e.g. timestamps, ads).",
+    )
+    anti_alias_tolerance: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Anti-aliasing tolerance [0–1]. Pixels whose neighbourhood max-channel "
+            "variance is below this fraction are treated as anti-aliased and ignored. "
+            "0 = strict (default), 0.1 is a reasonable value to suppress AA noise."
+        ),
+    )
 
 
 class ScreenshotDiffOutput(BaseModel):
@@ -264,6 +303,7 @@ class ScreenshotDiffOutput(BaseModel):
     total_pixels: int
     diff_ratio: float
     passed: bool
+    ignored_pixels: int = 0
 
 
 class BaselineSaveInput(BaseModel):
@@ -286,6 +326,16 @@ class BaselineCompareInput(BaseModel):
     browser: str = Field("chromium")
     viewport: str = Field("1280x720")
     threshold: float = Field(0.1, ge=0.0, le=1.0)
+    ignore_regions: list[IgnoreRegion] = Field(
+        default_factory=list,
+        description="Rectangular areas to exclude from diff.",
+    )
+    anti_alias_tolerance: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Anti-aliasing tolerance [0–1]. 0 = strict (default).",
+    )
 
 
 class BaselineCompareOutput(BaseModel):
@@ -296,6 +346,7 @@ class BaselineCompareOutput(BaseModel):
     diff_ratio: float
     passed: bool
     approved: bool = False
+    ignored_pixels: int = 0
 
 
 class BaselineApproveInput(BaseModel):
@@ -351,6 +402,10 @@ class RecordStopOutput(BaseModel):
     session_id: str
     spec_text: str
     spec_path: str | None = None
+    locators: dict[str, ElementLocatorsModel] = Field(
+        default_factory=dict,
+        description="Per-selector ranked locator candidates extracted from the recording.",
+    )
 
 
 class AutoSpecInput(BaseModel):
@@ -371,6 +426,34 @@ class AutoSpecOutput(BaseModel):
 class BrowserCheckOutput(BaseModel):
     installed: bool
     paths: list[str]
+
+
+class LocatorCandidateModel(BaseModel):
+    """Wire model for a single ranked locator candidate."""
+
+    priority: int
+    strategy: str
+    selector: str
+
+
+class ElementLocatorsModel(BaseModel):
+    """Wire model for all candidates captured for one element action."""
+
+    primary: LocatorCandidateModel
+    candidates: list[LocatorCandidateModel] = Field(default_factory=list)
+
+
+class HealedLocatorEvent(BaseModel):
+    """Describes one self-healing substitution that occurred during a run."""
+
+    primary: str = Field(..., description="Original primary selector that failed.")
+    healed: str = Field(..., description="Fallback selector that succeeded.")
+    strategy: str = Field(..., description="Strategy of the healed selector.")
+
+
+# Extend SilkRunOutput is defined later; we store healed events here so they
+# can be appended after _parse_healed_events is called.
+# The actual SilkRunOutput model gets healed_locators field below.
 
 
 # ---------------------------------------------------------------------------
@@ -762,6 +845,162 @@ def _parse_screenshot_paths(json_report: dict | None) -> list[str]:
     return paths
 
 
+def _parse_healed_events(json_report: dict | None) -> list["HealedLocatorEvent"]:
+    """Extract self-healing locator events from Playwright JSON report attachments.
+
+    Looks for attachments named ``silk-healed.json`` and deserialises the
+    list of :class:`HealedLocatorEvent` dicts stored there.
+    """
+    if not json_report:
+        return []
+
+    events: list[HealedLocatorEvent] = []
+
+    def _walk_suites(suites: list) -> None:
+        for suite in suites:
+            for spec in suite.get("specs", []):
+                for test in spec.get("tests", []):
+                    for result in test.get("results", []):
+                        for att in result.get("attachments", []):
+                            if att.get("name") != "silk-healed.json":
+                                continue
+                            raw = att.get("body") or ""
+                            if not raw and att.get("path"):
+                                try:
+                                    raw = Path(att["path"]).read_text(encoding="utf-8")
+                                except OSError:
+                                    continue
+                            if not raw:
+                                continue
+                            try:
+                                data = json.loads(raw)
+                            except (json.JSONDecodeError, ValueError):
+                                import base64
+                                try:
+                                    data = json.loads(base64.b64decode(raw).decode("utf-8"))
+                                except Exception:
+                                    continue
+                            if isinstance(data, list):
+                                for item in data:
+                                    if isinstance(item, dict):
+                                        try:
+                                            events.append(HealedLocatorEvent(
+                                                primary=item.get("primary", ""),
+                                                healed=item.get("healed", ""),
+                                                strategy=item.get("strategy", ""),
+                                            ))
+                                        except Exception:
+                                            pass
+            _walk_suites(suite.get("suites", []))
+
+    _walk_suites(json_report.get("suites", []))
+    return events
+
+
+def _build_mask(width: int, height: int, ignore_regions: list["IgnoreRegion"]) -> "list[tuple[int,int,int,int]]":
+    """Build a list of (x1, y1, x2, y2) clamp-checked rects from ignore regions."""
+    rects: list[tuple[int, int, int, int]] = []
+    for r in ignore_regions:
+        x1 = max(0, r.x)
+        y1 = max(0, r.y)
+        x2 = min(width, r.x + r.width)
+        y2 = min(height, r.y + r.height)
+        if x2 > x1 and y2 > y1:
+            rects.append((x1, y1, x2, y2))
+    return rects
+
+
+def _pixel_in_mask(px: int, py: int, rects: list[tuple[int, int, int, int]]) -> bool:
+    for x1, y1, x2, y2 in rects:
+        if x1 <= px < x2 and y1 <= py < y2:
+            return True
+    return False
+
+
+def _compute_pixel_diff(
+    baseline_img: "Image.Image",
+    current_img: "Image.Image",
+    threshold_channel: int = 10,
+    ignore_regions: "list[IgnoreRegion] | None" = None,
+    anti_alias_tolerance: float = 0.0,
+) -> tuple[int, int, int]:
+    """Compute pixel diff count, total_pixels, and ignored_pixels.
+
+    Returns:
+        (pixel_diff_count, total_pixels, ignored_pixels)
+
+    *threshold_channel* is the per-channel absolute delta threshold (0–255)
+    above which a pixel is considered different.
+
+    *anti_alias_tolerance* [0–1] suppresses pixels whose 3×3 neighbourhood
+    max-channel variance is below ``anti_alias_tolerance * 255``.  Set to 0
+    to disable (the original strict behaviour).
+    """
+    from PIL import ImageChops
+
+    if baseline_img.size != current_img.size:
+        current_img = current_img.resize(baseline_img.size, resample=1)  # LANCZOS=1
+
+    width, height = baseline_img.size
+    total_pixels = width * height
+
+    rects = _build_mask(width, height, ignore_regions or [])
+
+    diff_img = ImageChops.difference(baseline_img, current_img)
+    diff_l = diff_img.convert("L")
+
+    # Build pixel arrays for anti-alias neighbourhood check if needed.
+    aa_enabled = anti_alias_tolerance > 0.0
+    aa_threshold = anti_alias_tolerance * 255
+
+    if aa_enabled:
+        baseline_pixels = baseline_img.load()
+        current_pixels = current_img.load()
+
+    diff_pixels = diff_l.load()
+
+    pixel_diff_count = 0
+    ignored_pixels = 0
+
+    for py in range(height):
+        for px in range(width):
+            # --- Ignore regions mask ---
+            if rects and _pixel_in_mask(px, py, rects):
+                ignored_pixels += 1
+                continue
+
+            delta = diff_pixels[px, py]  # type: ignore[index]
+            if delta <= threshold_channel:
+                continue
+
+            # --- Anti-alias neighbourhood suppression ---
+            if aa_enabled:
+                max_var = 0.0
+                for dy in range(-1, 2):
+                    ny = py + dy
+                    if ny < 0 or ny >= height:
+                        continue
+                    for dx in range(-1, 2):
+                        nx = px + dx
+                        if nx < 0 or nx >= width:
+                            continue
+                        # Max channel diff in neighbourhood (use baseline)
+                        nb = baseline_pixels[nx, ny]  # type: ignore[index]
+                        nc = current_pixels[nx, ny]  # type: ignore[index]
+                        if isinstance(nb, (list, tuple)):
+                            for cb, cc in zip(nb, nc):
+                                max_var = max(max_var, abs(int(cb) - int(cc)))
+                        else:
+                            max_var = max(max_var, abs(int(nb) - int(nc)))
+                if max_var < aa_threshold:
+                    ignored_pixels += 1
+                    continue
+
+            pixel_diff_count += 1
+
+    return pixel_diff_count, total_pixels, ignored_pixels
+
+
 async def _run_single_browser_async(
     *,
     npx: str,
@@ -1022,8 +1261,10 @@ async def run_spec(body: SilkRunInput) -> SilkRunOutput:
     else:
         raise HTTPException(400, detail="provide either spec_path or inline_code")
 
-    # Apply wrappers for mocks and a11y.
+    # Apply wrappers for mocks, a11y, and self-healing locators.
     code = original_code
+    if body.locator_map:
+        code = _build_healing_wrapper_from_model(code, body.locator_map)
     if body.mocks:
         code = _build_mock_wrapper(code, body.mocks)
     if body.run_accessibility_audit:
@@ -1088,6 +1329,16 @@ async def run_spec(body: SilkRunInput) -> SilkRunOutput:
     # Parse screenshots from JSON report for history.
     screenshot_paths = _parse_screenshot_paths(canonical_report)
 
+    # Parse healed-locator events (deduplicated across browsers by primary+healed key).
+    all_healed: list[HealedLocatorEvent] = []
+    seen_healed: set[str] = set()
+    for r in results:
+        for evt in _parse_healed_events(r.json_report):
+            key = f"{evt.primary}:{evt.healed}"
+            if key not in seen_healed:
+                seen_healed.add(key)
+                all_healed.append(evt)
+
     # Persist to run history.
     silk_storage.save_run(
         run_id=run_id,
@@ -1137,6 +1388,7 @@ async def run_spec(body: SilkRunInput) -> SilkRunOutput:
         stderr_tail=canonical_stderr,
         per_browser_results=per_browser,
         a11y_violations=all_violations,
+        healed_locators=all_healed,
     )
 
 
@@ -1284,6 +1536,85 @@ async def _publish_run_result_v2(
 
 
 # ---------------------------------------------------------------------------
+# Self-healing locator helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_locators_from_spec(spec_code: str) -> dict[str, "ElementLocatorsModel"]:
+    """Extract self-healing locator candidates from a recorded Playwright spec.
+
+    Parses every recognisable action line (page.*, expect(page.*)) and builds a
+    map from primary-selector-string → :class:`ElementLocatorsModel`.
+
+    Returns an empty dict if the spec has no recognisable selectors.
+    """
+    from .. import silk_locators as _loc
+
+    actions = silk_transpile.parse_playwright_spec(spec_code)
+
+    locators: dict[str, ElementLocatorsModel] = {}
+    for action in actions:
+        if not action.selector:
+            continue
+        sel = action.selector
+        if sel in locators:
+            continue
+        element_locs = _loc.extract_candidates(sel)
+        locators[sel] = ElementLocatorsModel(
+            primary=LocatorCandidateModel(
+                priority=element_locs.primary.priority,
+                strategy=element_locs.primary.strategy,
+                selector=element_locs.primary.selector,
+            ),
+            candidates=[
+                LocatorCandidateModel(
+                    priority=c.priority,
+                    strategy=c.strategy,
+                    selector=c.selector,
+                )
+                for c in element_locs.candidates
+            ],
+        )
+    return locators
+
+
+def _build_healing_wrapper_from_model(
+    original_code: str,
+    locator_map: dict[str, "ElementLocatorsModel"],
+) -> str:
+    """Build the self-healing locator wrapper from wire models.
+
+    Converts :class:`ElementLocatorsModel` instances back to the domain model
+    and delegates to :func:`silk_locators.build_healing_wrapper`.
+    """
+    if not locator_map:
+        return original_code
+
+    from .. import silk_locators as _loc
+
+    domain_map: dict[str, _loc.ElementLocators] = {}
+    for sel, model in locator_map.items():
+        primary = _loc.LocatorCandidate(
+            priority=model.primary.priority,
+            strategy=model.primary.strategy,
+            selector=model.primary.selector,
+            pw_code=f"page.{model.primary.selector}",
+        )
+        candidates = [
+            _loc.LocatorCandidate(
+                priority=c.priority,
+                strategy=c.strategy,
+                selector=c.selector,
+                pw_code=f"page.{c.selector}",
+            )
+            for c in model.candidates
+        ]
+        domain_map[sel] = _loc.ElementLocators(primary=primary, candidates=candidates)
+
+    return _loc.build_healing_wrapper(original_code, domain_map)
+
+
+# ---------------------------------------------------------------------------
 # 3. Trace download
 # ---------------------------------------------------------------------------
 
@@ -1317,7 +1648,15 @@ def get_trace(run_id: str) -> FileResponse:
 
 @router.post("/screenshot-diff", response_model=ScreenshotDiffOutput)
 def screenshot_diff(body: ScreenshotDiffInput) -> ScreenshotDiffOutput:
-    """Compute a pixel diff between two PNG images using Pillow ImageChops."""
+    """Compute a pixel diff between two PNG images using Pillow.
+
+    Supports:
+    - ``ignore_regions``: rectangular masks to exclude from the diff count
+      (useful for timestamps, ads, dynamic areas).
+    - ``anti_alias_tolerance``: suppress anti-aliased edge pixels that vary
+      due to sub-pixel rendering differences (0 = strict, 0.1 = light AA
+      suppression, 0.3 = aggressive).
+    """
     from .ws_security import _safe_resolve_path
 
     try:
@@ -1341,17 +1680,23 @@ def screenshot_diff(body: ScreenshotDiffInput) -> ScreenshotDiffOutput:
     except Exception as exc:
         raise HTTPException(400, detail=f"could not open image: {exc}") from exc
 
+    pixel_diff_count, total_pixels, ignored_pixels = _compute_pixel_diff(
+        baseline_img,
+        current_img,
+        threshold_channel=10,
+        ignore_regions=body.ignore_regions,
+        anti_alias_tolerance=body.anti_alias_tolerance,
+    )
+
+    # Compute diffable pixels: exclude ignored from denominator so threshold
+    # is evaluated only over comparable pixels.
+    diffable = total_pixels - ignored_pixels
+    diff_ratio = pixel_diff_count / diffable if diffable > 0 else 0.0
+
+    # Render visual diff image (resize if needed, draw raw channel diff).
     if baseline_img.size != current_img.size:
         current_img = current_img.resize(baseline_img.size, Image.LANCZOS)
-
     diff_img = ImageChops.difference(baseline_img, current_img)
-    diff_arr = diff_img.convert("L")
-    thresholded = diff_arr.point(lambda x: 255 if x > 10 else 0)
-
-    pixel_diff_count = sum(1 for px in thresholded.getdata() if px > 0)
-    total_pixels = baseline_img.width * baseline_img.height
-    diff_ratio = pixel_diff_count / total_pixels if total_pixels > 0 else 0.0
-
     enhanced = diff_img.filter(ImageFilter.SHARPEN)
     diff_out_path = _silk_dir() / "diffs" / f"{uuid.uuid4().hex}.png"
     diff_out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1363,6 +1708,7 @@ def screenshot_diff(body: ScreenshotDiffInput) -> ScreenshotDiffOutput:
         total_pixels=total_pixels,
         diff_ratio=round(diff_ratio, 6),
         passed=diff_ratio <= body.threshold,
+        ignored_pixels=ignored_pixels,
     )
 
 
@@ -1572,9 +1918,13 @@ async def record_stop(body: dict) -> RecordStopOutput:
 
     spec_text = ""
     spec_path_str: str | None = None
+    locators_model: dict[str, ElementLocatorsModel] = {}
 
     if output_file.exists():
         raw_pw_text = output_file.read_text(encoding="utf-8")
+
+        # Extract self-healing locator candidates from the raw Playwright recording.
+        locators_model = _extract_locators_from_spec(raw_pw_text)
 
         if requested_framework is not None:
             # Transpile Playwright-test TS into the user's requested framework.
@@ -1603,6 +1953,7 @@ async def record_stop(body: dict) -> RecordStopOutput:
         session_id=session_id,
         spec_text=spec_text,
         spec_path=spec_path_str,
+        locators=locators_model,
     )
 
 
@@ -1710,7 +2061,12 @@ def baseline_save(body: BaselineSaveInput) -> BaselineSaveOutput:
 
 @router.post("/baseline/compare", response_model=BaselineCompareOutput)
 def baseline_compare(body: BaselineCompareInput) -> BaselineCompareOutput:
-    """Diff current screenshot against saved baseline, return pixel stats + threshold."""
+    """Diff current screenshot against saved baseline, return pixel stats + threshold.
+
+    Supports:
+    - ``ignore_regions``: rectangular masks to exclude from the diff count.
+    - ``anti_alias_tolerance``: suppress sub-pixel anti-aliasing noise.
+    """
     dest_name = _baseline_filename(body.test_id, body.browser, body.viewport)
     baseline_p = _baselines_dir() / dest_name
 
@@ -1735,17 +2091,21 @@ def baseline_compare(body: BaselineCompareInput) -> BaselineCompareOutput:
     except Exception as exc:
         raise HTTPException(400, detail=f"could not open image: {exc}") from exc
 
+    pixel_diff_count, total_pixels, ignored_pixels = _compute_pixel_diff(
+        baseline_img,
+        current_img,
+        threshold_channel=10,
+        ignore_regions=body.ignore_regions,
+        anti_alias_tolerance=body.anti_alias_tolerance,
+    )
+
+    diffable = total_pixels - ignored_pixels
+    diff_ratio = pixel_diff_count / diffable if diffable > 0 else 0.0
+
+    # Render visual diff image.
     if baseline_img.size != current_img.size:
         current_img = current_img.resize(baseline_img.size, Image.LANCZOS)
-
     diff_img = ImageChops.difference(baseline_img, current_img)
-    diff_arr = diff_img.convert("L")
-    thresholded = diff_arr.point(lambda x: 255 if x > 10 else 0)
-
-    pixel_diff_count = sum(1 for px in thresholded.getdata() if px > 0)
-    total_pixels = baseline_img.width * baseline_img.height
-    diff_ratio = pixel_diff_count / total_pixels if total_pixels > 0 else 0.0
-
     enhanced = diff_img.filter(ImageFilter.SHARPEN)
     diff_out_path = _silk_dir() / "diffs" / f"{uuid.uuid4().hex}.png"
     diff_out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1759,6 +2119,7 @@ def baseline_compare(body: BaselineCompareInput) -> BaselineCompareOutput:
         diff_ratio=round(diff_ratio, 6),
         passed=diff_ratio <= body.threshold,
         approved=False,
+        ignored_pixels=ignored_pixels,
     )
 
 
