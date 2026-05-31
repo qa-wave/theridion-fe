@@ -227,6 +227,7 @@ jobs:
           tagName:      ${{ github.ref_name }}
           releaseName:  "Theridion ${{ github.ref_name }}"
           releaseDraft: true
+          updaterJsonPath: latest-eyes.json
           args:         --target ${{ matrix.target }}
 
   publish:
