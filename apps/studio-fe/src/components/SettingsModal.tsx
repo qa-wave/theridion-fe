@@ -5,26 +5,28 @@ import type { SilkPublishConfigOut } from "../lib/sidecar";
 import { pingHub } from "../lib/sidecar/hub";
 import { THEMES, applyTheme, loadTheme, type ThemeId } from "../state/theme";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useT } from "../lib/i18n/context";
 
 type Tab = "general" | "ai" | "editor" | "proxy" | "hub" | "publish" | "shortcuts" | "about";
-
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "general", label: "General", icon: <Settings2 className="h-3.5 w-3.5" /> },
-  { id: "ai", label: "AI", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { id: "editor", label: "Editor", icon: <Monitor className="h-3.5 w-3.5" /> },
-  { id: "proxy", label: "Proxy", icon: <Radio className="h-3.5 w-3.5" /> },
-  { id: "hub", label: "Hub", icon: <Server className="h-3.5 w-3.5" /> },
-  { id: "publish", label: "Publikování", icon: <Share2 className="h-3.5 w-3.5" /> },
-  { id: "shortcuts", label: "Shortcuts", icon: <Keyboard className="h-3.5 w-3.5" /> },
-  { id: "about", label: "About", icon: <Info className="h-3.5 w-3.5" /> },
-];
 
 interface Props { open: boolean; onClose: () => void; }
 
 export function SettingsModal({ open, onClose }: Props) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>("general");
   const trapRef = useRef<HTMLDivElement>(null);
   useFocusTrap(trapRef, open);
+
+  const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "general", label: t("settings.tab.general"), icon: <Settings2 className="h-3.5 w-3.5" /> },
+    { id: "ai", label: t("settings.tab.ai"), icon: <Sparkles className="h-3.5 w-3.5" /> },
+    { id: "editor", label: t("settings.tab.editor"), icon: <Monitor className="h-3.5 w-3.5" /> },
+    { id: "proxy", label: t("settings.tab.proxy"), icon: <Radio className="h-3.5 w-3.5" /> },
+    { id: "hub", label: t("settings.tab.hub"), icon: <Server className="h-3.5 w-3.5" /> },
+    { id: "publish", label: t("settings.tab.publish"), icon: <Share2 className="h-3.5 w-3.5" /> },
+    { id: "shortcuts", label: t("settings.tab.shortcuts"), icon: <Keyboard className="h-3.5 w-3.5" /> },
+    { id: "about", label: t("settings.tab.about"), icon: <Info className="h-3.5 w-3.5" /> },
+  ];
 
   // AI settings
   const [provider, setProvider] = useState("ollama");
@@ -126,7 +128,7 @@ export function SettingsModal({ open, onClose }: Props) {
         <div className="flex w-48 shrink-0 flex-col border-r border-glass bg-neutral-950/40">
           <div className="border-b border-glass px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-medium text-neutral-100">
-              <Settings2 className="h-4 w-4 text-cobweb-400" /> Settings
+              <Settings2 className="h-4 w-4 text-cobweb-400" /> {t("settings.title")}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto py-1">
@@ -160,50 +162,50 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- General ---- */}
             {tab === "general" && (
               <div className="space-y-5">
-                <Section title="Theme">
+                <Section title={t("settings.general.theme")}>
                   <div className="grid grid-cols-3 gap-2">
-                    {THEMES.map((t) => (
+                    {THEMES.map((th) => (
                       <button
-                        key={t.id}
+                        key={th.id}
                         type="button"
-                        onClick={() => { setTheme(t.id); applyTheme(t.id); }}
+                        onClick={() => { setTheme(th.id); applyTheme(th.id); }}
                         className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition ${
-                          theme === t.id ? "border-cobweb-500/40 bg-cobweb-950/20 text-cobweb-200" : "border-glass text-neutral-400 hover:border-glass-light hover:text-neutral-200"
+                          theme === th.id ? "border-cobweb-500/40 bg-cobweb-950/20 text-cobweb-200" : "border-glass text-neutral-400 hover:border-glass-light hover:text-neutral-200"
                         }`}
                       >
-                        <span className={`inline-block h-3 w-3 rounded-full ${t.dot}`} />
-                        {t.label}
+                        <span className={`inline-block h-3 w-3 rounded-full ${th.dot}`} />
+                        {th.label}
                       </button>
                     ))}
                   </div>
                 </Section>
 
-                <Section title="Request Defaults">
+                <Section title={t("settings.general.requestDefaults")}>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelClass}>Timeout (seconds)</label>
+                      <label className={labelClass}>{t("settings.general.timeout")}</label>
                       <input type="number" value={timeout} onChange={(e) => setTimeout_(Number(e.target.value))} min={1} max={300} className={inputClass} />
                     </div>
                     <div className="space-y-2 pt-5">
                       <label className="flex items-center gap-2 text-xs text-neutral-300">
                         <input type="checkbox" checked={followRedirects} onChange={(e) => setFollowRedirects(e.target.checked)} className={checkClass} />
-                        Follow redirects
+                        {t("settings.general.followRedirects")}
                       </label>
                       <label className="flex items-center gap-2 text-xs text-neutral-300">
                         <input type="checkbox" checked={http2} onChange={(e) => setHttp2(e.target.checked)} className={checkClass} />
-                        Enable HTTP/2
+                        {t("settings.general.http2")}
                       </label>
                     </div>
                   </div>
                 </Section>
 
-                <Section title="Global Variables">
+                <Section title={t("settings.general.globalVars")}>
                   <GlobalVarsEditor />
                 </Section>
 
-                <Section title="Data">
+                <Section title={t("settings.general.data")}>
                   <p className="text-[11px] text-neutral-500">
-                    Data is stored locally at <span className="font-mono text-cobweb-400">~/.theridion/</span>
+                    {t("settings.general.dataPath")} <span className="font-mono text-cobweb-400">~/.theridion/</span>
                   </p>
                 </Section>
               </div>
@@ -212,7 +214,7 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- AI ---- */}
             {tab === "ai" && (
               <div className="space-y-4">
-                <Section title="Provider">
+                <Section title={t("settings.ai.provider")}>
                   <select
                     data-testid="ai-provider-select"
                     value={provider} onChange={(e) => setProvider(e.target.value)}
@@ -225,21 +227,21 @@ export function SettingsModal({ open, onClose }: Props) {
 
                 {provider === "ollama" && (
                   <>
-                    <Section title="Ollama Base URL">
+                    <Section title={t("settings.ai.ollamaUrl")}>
                       <div className="flex gap-2">
                         <input value={ollamaUrl} onChange={(e) => setOllamaUrl(e.target.value)} className={inputClass} />
                         <button type="button" onClick={testConnection}
                           className="shrink-0 rounded-md border border-glass px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200">
-                          Ping
+                          {t("settings.ai.ping")}
                         </button>
                       </div>
                       {pingResult && (
                         <p className={`mt-1 text-[11px] ${pingResult.ok ? "text-emerald-400" : "text-rose-400"}`}>
-                          {pingResult.ok ? `Connected (v${pingResult.version})` : pingResult.error}
+                          {pingResult.ok ? t("settings.ai.connected", { version: pingResult.version ?? "" }) : pingResult.error}
                         </p>
                       )}
                     </Section>
-                    <Section title="Model">
+                    <Section title={t("settings.ai.model")}>
                       <div className="flex gap-2">
                         <select value={ollamaModel} onChange={(e) => setOllamaModel(e.target.value)}
                           className="flex-1 rounded-md border border-glass bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-100 focus:outline-none">
@@ -251,7 +253,7 @@ export function SettingsModal({ open, onClose }: Props) {
                         </select>
                         <button type="button" onClick={loadModels}
                           className="shrink-0 rounded-md border border-glass px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200">
-                          Refresh
+                          {t("settings.ai.modelRefresh")}
                         </button>
                       </div>
                     </Section>
@@ -259,8 +261,7 @@ export function SettingsModal({ open, onClose }: Props) {
                 )}
 
                 <div className="rounded-md border border-glass bg-neutral-900/20 px-3 py-2 text-[11px] text-neutral-500">
-                  Ollama runs locally — your data never leaves your machine.
-                  Cloud providers send request/response data to external servers.
+                  {t("settings.ai.localNote")}
                 </div>
               </div>
             )}
@@ -268,23 +269,23 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- Editor ---- */}
             {tab === "editor" && (
               <div className="space-y-4">
-                <Section title="Font Size">
+                <Section title={t("settings.editor.fontSize")}>
                   <input type="number" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} min={8} max={24} className="w-20 rounded-md border border-glass bg-neutral-900/50 px-3 py-1.5 text-xs text-neutral-100 focus:outline-none" />
                   <span className="ml-2 text-xs text-neutral-500">px</span>
                 </Section>
-                <Section title="Options">
+                <Section title={t("settings.editor.options")}>
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-xs text-neutral-300">
                       <input type="checkbox" checked={wordWrap} onChange={(e) => setWordWrap(e.target.checked)} className={checkClass} />
-                      Word wrap
+                      {t("settings.editor.wordWrap")}
                     </label>
                     <label className="flex items-center gap-2 text-xs text-neutral-300">
                       <input type="checkbox" checked={minimap} onChange={(e) => setMinimap(e.target.checked)} className={checkClass} />
-                      Show minimap
+                      {t("settings.editor.minimap")}
                     </label>
                     <label className="flex items-center gap-2 text-xs text-neutral-300">
                       <input type="checkbox" checked={lineNumbers} onChange={(e) => setLineNumbers(e.target.checked)} className={checkClass} />
-                      Show line numbers
+                      {t("settings.editor.lineNumbers")}
                     </label>
                   </div>
                 </Section>
@@ -294,27 +295,27 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- Proxy ---- */}
             {tab === "proxy" && (
               <div className="space-y-4">
-                <Section title="HTTP Proxy">
+                <Section title={t("settings.proxy.title")}>
                   <p className="text-[11px] text-neutral-500">
-                    Configure an upstream proxy for all outgoing requests.
+                    {t("settings.proxy.description")}
                   </p>
                   <div className="mt-2">
-                    <label className={labelClass}>Proxy URL (optional)</label>
-                    <input placeholder="http://proxy.corp:8080" className={inputClass} />
+                    <label className={labelClass}>{t("settings.proxy.url.label")}</label>
+                    <input placeholder={t("settings.proxy.url.placeholder")} className={inputClass} />
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-xs text-neutral-300">
                     <input type="checkbox" className={checkClass} />
-                    Bypass proxy for localhost
+                    {t("settings.proxy.bypassLocalhost")}
                   </label>
                 </Section>
-                <Section title="SSL / TLS">
+                <Section title={t("settings.proxy.ssl")}>
                   <label className="flex items-center gap-2 text-xs text-neutral-300">
                     <input type="checkbox" defaultChecked className={checkClass} />
-                    Verify SSL certificates
+                    {t("settings.proxy.sslVerify")}
                   </label>
                   <div className="mt-2">
-                    <label className={labelClass}>CA Bundle (optional)</label>
-                    <input placeholder="/path/to/ca-bundle.crt" className={inputClass} />
+                    <label className={labelClass}>{t("settings.proxy.caBundle.label")}</label>
+                    <input placeholder={t("settings.proxy.caBundle.placeholder")} className={inputClass} />
                   </div>
                 </Section>
               </div>
@@ -323,24 +324,24 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- Hub ---- */}
             {tab === "hub" && (
               <div className="space-y-4">
-                <Section title="Theridion Hub">
+                <Section title={t("settings.hub.section")}>
                   <p className="mb-3 text-[11px] text-neutral-500">
-                    Connect to a running Theridion Hub instance to see run trends, incidents and quality gate statuses in Studio.
+                    {t("settings.hub.description")}
                   </p>
                   <div className="space-y-3">
                     <div>
-                      <label className={labelClass}>Hub URL</label>
+                      <label className={labelClass}>{t("settings.hub.url.label")}</label>
                       <input
                         data-testid="hub-url-input"
                         value={hubUrl}
                         onChange={(e) => setHubUrl(e.target.value)}
-                        placeholder="https://hub.theridion.dev"
+                        placeholder={t("settings.hub.url.placeholder")}
                         className={inputClass}
                         spellCheck={false}
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Ingest Token</label>
+                      <label className={labelClass}>{t("settings.hub.token.label")}</label>
                       <input
                         data-testid="hub-token-input"
                         type="password"
@@ -358,18 +359,18 @@ export function SettingsModal({ open, onClose }: Props) {
                         disabled={hubPinging || !hubUrl.trim() || !hubToken.trim()}
                         className="inline-flex items-center gap-1.5 rounded-md border border-glass px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 disabled:opacity-40"
                       >
-                        {hubPinging ? <Loader2 className="h-3 w-3 animate-spin" /> : "Test connection"}
+                        {hubPinging ? <Loader2 className="h-3 w-3 animate-spin" /> : t("settings.hub.testConnection")}
                       </button>
                       {hubPingResult && (
                         <p className={`text-[11px] ${hubPingResult.ok ? "text-emerald-400" : "text-rose-400"}`}>
-                          {hubPingResult.ok ? `Connected (v${hubPingResult.version})` : hubPingResult.error}
+                          {hubPingResult.ok ? t("settings.hub.connected", { version: hubPingResult.version ?? "" }) : hubPingResult.error}
                         </p>
                       )}
                     </div>
                   </div>
                 </Section>
                 <div className="rounded-md border border-glass bg-neutral-900/20 px-3 py-2 text-[11px] text-neutral-500">
-                  The Hub token is stored locally in your browser. It is never sent to any server other than the Hub URL above.
+                  {t("settings.hub.tokenNote")}
                 </div>
               </div>
             )}
@@ -380,14 +381,14 @@ export function SettingsModal({ open, onClose }: Props) {
             {/* ---- Shortcuts ---- */}
             {tab === "shortcuts" && (
               <div className="space-y-1">
-                <Shortcut keys="⌘ Enter" action="Send request" />
-                <Shortcut keys="⌘ S" action="Save request" />
-                <Shortcut keys="⌘ ⇧ S" action="Save As..." />
-                <Shortcut keys="⌘ T" action="New tab" />
-                <Shortcut keys="⌘ W" action="Close tab" />
-                <Shortcut keys="⌘ K" action="Command palette" />
-                <Shortcut keys="⌘ ," action="Settings" />
-                <Shortcut keys="Esc" action="Close modal / cancel" />
+                <Shortcut keys="⌘ Enter" action={t("settings.shortcuts.send")} />
+                <Shortcut keys="⌘ S" action={t("settings.shortcuts.save")} />
+                <Shortcut keys="⌘ ⇧ S" action={t("settings.shortcuts.saveAs")} />
+                <Shortcut keys="⌘ T" action={t("settings.shortcuts.newTab")} />
+                <Shortcut keys="⌘ W" action={t("settings.shortcuts.closeTab")} />
+                <Shortcut keys="⌘ K" action={t("settings.shortcuts.commandPalette")} />
+                <Shortcut keys="⌘ ," action={t("settings.shortcuts.settings")} />
+                <Shortcut keys="Esc" action={t("settings.shortcuts.close")} />
               </div>
             )}
 
@@ -396,17 +397,17 @@ export function SettingsModal({ open, onClose }: Props) {
               <div className="space-y-4">
                 <div className="text-center">
                   <h2 className="text-lg font-bold text-gradient">Theridion</h2>
-                  <p className="mt-1 text-xs text-neutral-500">Modern API testing platform</p>
+                  <p className="mt-1 text-xs text-neutral-500">{t("settings.about.tagline")}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-neutral-600">v0.0.1</p>
                 </div>
                 <div className="rounded-md border border-glass bg-neutral-900/20 px-3 py-2 text-[11px] text-neutral-500">
-                  <p>Bruno UI/file-based ops + SoapUI WS-* strength + Playwright-style test runner.</p>
-                  <p className="mt-1">Protocols: REST, GraphQL, WebSocket, SOAP, Kafka, gRPC</p>
-                  <p className="mt-1">Stack: Tauri 2 + React 18 + Python FastAPI</p>
+                  <p>{t("settings.about.description")}</p>
+                  <p className="mt-1">{t("settings.about.protocols")}</p>
+                  <p className="mt-1">{t("settings.about.stack")}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-[10px] text-neutral-600">
-                    Named after the <em>Theridion</em> genus of cobweb spiders — a metaphor for tangled API dependencies.
+                    {t("settings.about.named")}
                   </p>
                 </div>
               </div>
@@ -416,11 +417,11 @@ export function SettingsModal({ open, onClose }: Props) {
           {/* Footer */}
           <div className="flex justify-end gap-2 border-t border-glass px-4 py-3">
             <button type="button" onClick={onClose} className="rounded-md border border-glass px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200">
-              Cancel
+              {t("settings.cancel")}
             </button>
             <button type="button" onClick={save} disabled={busy}
               className="bg-accent-gradient inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium text-white shadow-glow-sm transition disabled:opacity-40 disabled:shadow-none">
-              {saved ? <><Check className="h-3.5 w-3.5" /> Saved</> : busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+              {saved ? <><Check className="h-3.5 w-3.5" /> {t("settings.saved")}</> : busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("settings.save")}
             </button>
           </div>
         </div>
@@ -456,6 +457,7 @@ function Shortcut({ keys, action }: { keys: string; action: string }) {
 const _MASKED = "••••••••••••••••";
 
 function PublishConfigPanel() {
+  const t = useT();
   const [weaveUrl, setWeaveUrl] = useState("");
   const [weaveToken, setWeaveToken] = useState("");
   const [hubUrl, setHubUrl] = useState("");
@@ -510,7 +512,7 @@ function PublishConfigPanel() {
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 1500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Uložení selhalo");
+      setError(e instanceof Error ? e.message : t("settings.publish.save"));
     } finally {
       setSaving(false);
     }
@@ -521,16 +523,14 @@ function PublishConfigPanel() {
   const labelClass = "mb-1 block text-[10px] uppercase tracking-widest text-neutral-500";
 
   if (loading) {
-    return <p className="text-[11px] text-neutral-500">Načítání...</p>;
+    return <p className="text-[11px] text-neutral-500">{t("settings.publish.loading")}</p>;
   }
 
   return (
     <div className="space-y-5">
-      <Section title="Publikování výsledků">
+      <Section title={t("settings.publish.section")}>
         <p className="mb-3 text-[11px] text-neutral-500">
-          Po každém spuštění testu jsou výsledky automaticky odesílány na Weave
-          (nebo Hub). Zkopírujte Ingest URL a token z nastavení Weave a vložte
-          je sem.
+          {t("settings.publish.description")}
         </p>
 
         <label className="mb-4 flex items-center gap-2 text-xs text-neutral-300">
@@ -540,68 +540,68 @@ function PublishConfigPanel() {
             onChange={(e) => setEnabled(e.target.checked)}
             className="h-3.5 w-3.5 cursor-pointer accent-cobweb-500"
           />
-          Povolit publikování výsledků
+          {t("settings.publish.enable")}
         </label>
       </Section>
 
-      <Section title="Weave Ingest">
+      <Section title={t("settings.publish.weave.section")}>
         <div className="space-y-3">
           <div>
-            <label className={labelClass}>Ingest URL</label>
+            <label className={labelClass}>{t("settings.publish.weaveUrl.label")}</label>
             <input
               value={weaveUrl}
               onChange={(e) => setWeaveUrl(e.target.value)}
-              placeholder="https://weave.example.com/api/runs/ingest"
+              placeholder={t("settings.publish.weaveUrl.placeholder")}
               className={inputClass}
               spellCheck={false}
               autoComplete="off"
             />
           </div>
           <div>
-            <label className={labelClass}>Token</label>
+            <label className={labelClass}>{t("settings.publish.weaveToken.label")}</label>
             <input
               type="password"
               value={weaveToken}
               onChange={(e) => setWeaveToken(e.target.value)}
-              placeholder={weaveTokenSet ? _MASKED : "Vložte token z Weave Settings"}
+              placeholder={weaveTokenSet ? _MASKED : t("settings.publish.weaveToken.placeholder.empty")}
               className={inputClass}
               autoComplete="new-password"
             />
             {weaveTokenSet && !weaveToken && (
               <p className="mt-0.5 text-[10px] text-neutral-600">
-                Token je uložen. Ponechte prázdné pro zachování stávajícího.
+                {t("settings.publish.weaveToken.kept")}
               </p>
             )}
           </div>
         </div>
       </Section>
 
-      <Section title="Hub Ingest (volitelné)">
+      <Section title={t("settings.publish.hub.section")}>
         <div className="space-y-3">
           <div>
-            <label className={labelClass}>Hub URL</label>
+            <label className={labelClass}>{t("settings.publish.hubUrl.label")}</label>
             <input
               value={hubUrl}
               onChange={(e) => setHubUrl(e.target.value)}
-              placeholder="https://hub.example.com/api/ingest"
+              placeholder={t("settings.publish.hubUrl.placeholder")}
               className={inputClass}
               spellCheck={false}
               autoComplete="off"
             />
           </div>
           <div>
-            <label className={labelClass}>Token</label>
+            <label className={labelClass}>{t("settings.publish.hubToken.label")}</label>
             <input
               type="password"
               value={hubToken}
               onChange={(e) => setHubToken(e.target.value)}
-              placeholder={hubTokenSet ? _MASKED : "Vložte Hub token (volitelné)"}
+              placeholder={hubTokenSet ? _MASKED : t("settings.publish.hubToken.placeholder.empty")}
               className={inputClass}
               autoComplete="new-password"
             />
             {hubTokenSet && !hubToken && (
               <p className="mt-0.5 text-[10px] text-neutral-600">
-                Token je uložen. Ponechte prázdné pro zachování stávajícího.
+                {t("settings.publish.hubToken.kept")}
               </p>
             )}
           </div>
@@ -622,19 +622,17 @@ function PublishConfigPanel() {
           className="bg-accent-gradient inline-flex items-center gap-1.5 rounded-md px-4 py-1.5 text-xs font-medium text-white shadow-glow-sm transition disabled:opacity-40 disabled:shadow-none"
         >
           {savedMsg ? (
-            <><Check className="h-3.5 w-3.5" /> Uloženo</>
+            <><Check className="h-3.5 w-3.5" /> {t("settings.publish.saved")}</>
           ) : saving ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            "Uložit"
+            t("settings.publish.save")
           )}
         </button>
       </div>
 
       <div className="rounded-md border border-glass bg-neutral-900/20 px-3 py-2 text-[11px] text-neutral-500">
-        Tokeny jsou ukládány lokálně v zašifrovaném úložišti sidecaru
-        (<span className="font-mono text-cobweb-400">~/.theridion/publish-config.json</span>).
-        Nikdy nejsou logovány ani odesílány jinam než na nakonfigurované URL.
+        {t("settings.publish.storageNote")}
       </div>
     </div>
   );
@@ -647,6 +645,7 @@ interface GlobalVar {
 }
 
 function GlobalVarsEditor() {
+  const t = useT();
   const [vars, setVars] = useState<GlobalVar[]>([]);
   const [loading, setLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -697,23 +696,23 @@ function GlobalVarsEditor() {
   const checkClass = "h-3.5 w-3.5 cursor-pointer accent-cobweb-500";
 
   if (loading) {
-    return <p className="text-[11px] text-neutral-500">Loading...</p>;
+    return <p className="text-[11px] text-neutral-500">{t("settings.globalVars.loading")}</p>;
   }
 
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-neutral-500">
         <Globe className="mr-1 inline h-3 w-3" />
-        Variables available in all requests, lowest priority in the resolution chain.
+        {t("settings.globalVars.description")}
       </p>
       {vars.length > 0 && (
         <div className="overflow-hidden rounded border border-glass">
           <table className="w-full text-xs">
             <thead className="bg-neutral-900/60 text-neutral-500">
               <tr>
-                <th className="w-6 px-2 py-1 text-center font-medium">On</th>
-                <th className="px-2 py-1 text-left font-medium">Name</th>
-                <th className="px-2 py-1 text-left font-medium">Value</th>
+                <th className="w-6 px-2 py-1 text-center font-medium">{t("settings.globalVars.col.enabled")}</th>
+                <th className="px-2 py-1 text-left font-medium">{t("settings.globalVars.col.name")}</th>
+                <th className="px-2 py-1 text-left font-medium">{t("settings.globalVars.col.value")}</th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -732,7 +731,7 @@ function GlobalVarsEditor() {
                     <input
                       value={v.name}
                       onChange={(e) => update(idx, "name", e.target.value)}
-                      placeholder="name"
+                      placeholder={t("settings.globalVars.name.placeholder")}
                       className={inputClass}
                       spellCheck={false}
                     />
@@ -741,7 +740,7 @@ function GlobalVarsEditor() {
                     <input
                       value={v.value}
                       onChange={(e) => update(idx, "value", e.target.value)}
-                      placeholder="value"
+                      placeholder={t("settings.globalVars.value.placeholder")}
                       className={inputClass}
                       spellCheck={false}
                     />
@@ -751,7 +750,7 @@ function GlobalVarsEditor() {
                       type="button"
                       onClick={() => remove(idx)}
                       className="rounded p-0.5 text-neutral-600 transition hover:text-rose-400"
-                      title="Remove"
+                      title={t("settings.globalVars.remove.title")}
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -764,7 +763,7 @@ function GlobalVarsEditor() {
       )}
       <div className="flex items-center gap-2">
         <button type="button" onClick={add} className="inline-flex items-center gap-1 text-xs text-cobweb-400 hover:text-cobweb-300">
-          <Plus className="h-3 w-3" /> Add variable
+          <Plus className="h-3 w-3" /> {t("settings.globalVars.add")}
         </button>
         {dirty && (
           <button
@@ -774,11 +773,11 @@ function GlobalVarsEditor() {
             className="ml-auto inline-flex items-center gap-1 rounded-md border border-glass px-2 py-0.5 text-xs text-neutral-400 transition hover:bg-white/[0.04] hover:text-neutral-200 disabled:opacity-40"
           >
             {savedMsg ? (
-              <><Check className="h-3 w-3 text-emerald-400" /> Saved</>
+              <><Check className="h-3 w-3 text-emerald-400" /> {t("settings.globalVars.saved")}</>
             ) : saving ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              "Save globals"
+              t("settings.globalVars.saveGlobals")
             )}
           </button>
         )}

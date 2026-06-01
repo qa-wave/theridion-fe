@@ -6,6 +6,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HubOverviewPanel } from "../../src/components/HubOverviewPanel";
+import { I18nProvider } from "../../src/lib/i18n/context";
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>);
+}
 
 // Stub all hub module fetches
 vi.mock("../../src/lib/sidecar/hub", () => ({
@@ -98,19 +103,19 @@ beforeEach(() => {
 
 describe("HubOverviewPanel — empty state", () => {
   it("shows empty state when Hub is not configured", () => {
-    render(<HubOverviewPanel />);
+    renderWithI18n(<HubOverviewPanel />);
     expect(screen.getByText(/Hub not configured/i)).toBeInTheDocument();
   });
 
   it("shows Open Settings button when callback is provided", () => {
     const onOpenSettings = vi.fn();
-    render(<HubOverviewPanel onOpenSettings={onOpenSettings} />);
+    renderWithI18n(<HubOverviewPanel onOpenSettings={onOpenSettings} />);
     expect(screen.getByText(/Open Settings/i)).toBeInTheDocument();
   });
 
   it("calls onOpenSettings on button click", async () => {
     const onOpenSettings = vi.fn();
-    render(<HubOverviewPanel onOpenSettings={onOpenSettings} />);
+    renderWithI18n(<HubOverviewPanel onOpenSettings={onOpenSettings} />);
     await userEvent.click(screen.getByText(/Open Settings/i));
     expect(onOpenSettings).toHaveBeenCalledOnce();
   });
@@ -122,7 +127,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("renders Hub Overview header when configured", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     expect(screen.getByText(/Hub Overview/i)).toBeInTheDocument();
   });
@@ -130,7 +135,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("shows category sidebar with Runs / Incidents / Quality Gates", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     expect(screen.getByText("Runs")).toBeInTheDocument();
     expect(screen.getByText("Incidents")).toBeInTheDocument();
@@ -140,7 +145,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("displays run collection names", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     expect(screen.getByText("Auth Suite")).toBeInTheDocument();
     expect(screen.getByText("Payment API")).toBeInTheDocument();
@@ -149,7 +154,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("calls getRuns, getIncidents, getGates on mount", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     expect(vi.mocked(getRuns)).toHaveBeenCalledOnce();
     expect(vi.mocked(getIncidents)).toHaveBeenCalledOnce();
@@ -159,7 +164,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("renders the refresh button", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     // Refresh button has title "Refresh (Ctrl+R)"
     expect(screen.getByTitle(/Refresh/i)).toBeInTheDocument();
@@ -168,7 +173,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("switches to Incidents tab on click", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     await userEvent.click(screen.getByText("Incidents"));
     expect(screen.getByText("SLA breach")).toBeInTheDocument();
@@ -177,7 +182,7 @@ describe("HubOverviewPanel — with Hub config", () => {
   it("switches to Quality Gates tab on click", async () => {
     setupLocalStorage();
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     await userEvent.click(screen.getByText("Quality Gates"));
     expect(screen.getByText("Pass rate >= 90%")).toBeInTheDocument();
@@ -194,7 +199,7 @@ describe("HubOverviewPanel — error state", () => {
     setupLocalStorage();
 
     await act(async () => {
-      render(<HubOverviewPanel />);
+      renderWithI18n(<HubOverviewPanel />);
     });
     // Error banner should be visible
     expect(screen.getByText(/Hub 401/i)).toBeInTheDocument();
@@ -209,7 +214,7 @@ describe("HubOverviewPanel — failed run click", () => {
     setupLocalStorage();
 
     await act(async () => {
-      render(<HubOverviewPanel onOpenCollection={onOpenCollection} />);
+      renderWithI18n(<HubOverviewPanel onOpenCollection={onOpenCollection} />);
     });
 
     // Payment API has status=fail — click on its row triggers onOpenCollection

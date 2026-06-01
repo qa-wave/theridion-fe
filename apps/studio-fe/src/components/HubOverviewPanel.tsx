@@ -20,6 +20,7 @@ import {
   type QualityGateStatus,
   type RunSummary,
 } from "../lib/sidecar/hub";
+import { useT } from "../lib/i18n/context";
 
 const POLL_INTERVAL_MS = 30_000;
 const HUB_CONFIG_KEY = "theridion.hubConfig";
@@ -125,6 +126,7 @@ interface IncidentDetailModalProps {
 }
 
 function IncidentDetailModal({ incident, hubUrl, onClose }: IncidentDetailModalProps) {
+  const t = useT();
   const severityColor: Record<string, string> = {
     critical: "text-rose-400",
     high: "text-orange-400",
@@ -144,7 +146,7 @@ function IncidentDetailModal({ incident, hubUrl, onClose }: IncidentDetailModalP
         <div className="flex items-center justify-between border-b border-glass px-4 py-3">
           <div className="flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-rose-400" />
-            <span className="text-sm font-semibold text-neutral-100">Incident</span>
+            <span className="text-sm font-semibold text-neutral-100">{t("hub.incidents.detail.title")}</span>
           </div>
           <button
             type="button"
@@ -159,23 +161,23 @@ function IncidentDetailModal({ incident, hubUrl, onClose }: IncidentDetailModalP
           <p className="text-sm font-medium text-neutral-100">{incident.title}</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span className="text-neutral-500">Severity</span>
+              <span className="text-neutral-500">{t("hub.incidents.detail.severity")}</span>
               <p className={`mt-0.5 font-medium capitalize ${severityColor[incident.severity] ?? "text-neutral-300"}`}>
                 {incident.severity}
               </p>
             </div>
             <div>
-              <span className="text-neutral-500">Status</span>
+              <span className="text-neutral-500">{t("hub.incidents.detail.status")}</span>
               <p className={`mt-0.5 font-medium capitalize ${incident.status === "open" ? "text-amber-400" : "text-emerald-400"}`}>
                 {incident.status}
               </p>
             </div>
             <div>
-              <span className="text-neutral-500">Collection</span>
+              <span className="text-neutral-500">{t("hub.incidents.detail.collection")}</span>
               <p className="mt-0.5 text-neutral-200">{incident.collection_name}</p>
             </div>
             <div>
-              <span className="text-neutral-500">Opened</span>
+              <span className="text-neutral-500">{t("hub.incidents.detail.opened")}</span>
               <p className="mt-0.5 text-neutral-200">{formatTime(incident.opened_at)}</p>
             </div>
           </div>
@@ -187,7 +189,7 @@ function IncidentDetailModal({ incident, hubUrl, onClose }: IncidentDetailModalP
             onClick={onClose}
             className="rounded-md border border-glass px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200"
           >
-            Close
+            {t("hub.incidents.detail.close")}
           </button>
           <a
             href={`${hubUrl}/incidents/${incident.id}`}
@@ -195,7 +197,7 @@ function IncidentDetailModal({ incident, hubUrl, onClose }: IncidentDetailModalP
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md border border-glass px-3 py-1.5 text-xs text-cobweb-400 hover:bg-white/[0.04] hover:text-cobweb-300"
           >
-            Open in Hub <ExternalLink className="h-3 w-3" />
+            {t("hub.incidents.detail.openInHub")} <ExternalLink className="h-3 w-3" />
           </a>
         </div>
       </div>
@@ -229,6 +231,7 @@ interface Props {
 }
 
 export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
+  const t = useT();
   const { config, data, loading, error, connState, refresh, reload } = useHubData();
   const [category, setCategory] = useState<"runs" | "incidents" | "gates">("runs");
   const [selectedIncident, setSelectedIncident] = useState<IncidentSummary | null>(null);
@@ -267,9 +270,9 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
           <Server className="h-6 w-6 text-neutral-500" />
         </div>
         <div>
-          <p className="text-sm font-medium text-neutral-300">Hub not configured</p>
+          <p className="text-sm font-medium text-neutral-300">{t("hub.notConfigured.title")}</p>
           <p className="mt-1 text-xs text-neutral-500 max-w-xs">
-            Connect to a Theridion Hub to see run trends, incidents, and quality gate statuses without leaving Studio.
+            {t("hub.notConfigured.description")}
           </p>
         </div>
         {onOpenSettings && (
@@ -278,7 +281,7 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
             onClick={onOpenSettings}
             className="inline-flex items-center gap-1.5 rounded-md border border-glass px-3 py-1.5 text-xs text-cobweb-400 hover:bg-white/[0.04] hover:text-cobweb-300 transition"
           >
-            <Settings2 className="h-3.5 w-3.5" /> Open Settings
+            <Settings2 className="h-3.5 w-3.5" /> {t("hub.notConfigured.openSettings")}
           </button>
         )}
       </div>
@@ -286,13 +289,13 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
   }
 
   const categories: { id: "runs" | "incidents" | "gates"; label: string; count?: number }[] = [
-    { id: "runs", label: "Runs", count: data?.runs.length },
+    { id: "runs", label: t("hub.category.runs"), count: data?.runs.length },
     {
       id: "incidents",
-      label: "Incidents",
+      label: t("hub.category.incidents"),
       count: data?.incidents.filter((i) => i.status === "open").length,
     },
-    { id: "gates", label: "Quality Gates", count: data?.gates.length },
+    { id: "gates", label: t("hub.category.gates"), count: data?.gates.length },
   ];
 
   // KPI summary numbers
@@ -311,7 +314,7 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-cobweb-400" />
           <span className="text-xs font-semibold uppercase tracking-widest text-neutral-300">
-            Hub Overview
+            {t("hub.title")}
           </span>
           <span
             className={`inline-block h-1.5 w-1.5 rounded-full ${connDot[connState]}`}
@@ -327,7 +330,7 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
           <button
             type="button"
             onClick={refresh}
-            title="Refresh (Ctrl+R)"
+            title={t("hub.refresh.title")}
             disabled={loading}
             className="rounded-md p-1 text-neutral-500 transition hover:bg-white/[0.05] hover:text-neutral-200 disabled:opacity-40"
           >
@@ -349,9 +352,9 @@ export function HubOverviewPanel({ onOpenCollection, onOpenSettings }: Props) {
         <div className="flex w-36 shrink-0 flex-col border-r border-glass bg-neutral-950/30">
           {/* KPI mini-cards */}
           <div className="border-b border-glass p-3 space-y-2">
-            <KpiCard label="Avg pass rate" value={`${avgPassRate}%`} color={avgPassRate >= 80 ? "text-emerald-400" : "text-rose-400"} />
-            <KpiCard label="Open incidents" value={String(openIncidents)} color={openIncidents > 0 ? "text-amber-400" : "text-neutral-400"} />
-            <KpiCard label="Gates failing" value={String(gatesFailing)} color={gatesFailing > 0 ? "text-rose-400" : "text-neutral-400"} />
+            <KpiCard label={t("hub.kpi.avgPassRate")} value={`${avgPassRate}%`} color={avgPassRate >= 80 ? "text-emerald-400" : "text-rose-400"} />
+            <KpiCard label={t("hub.kpi.openIncidents")} value={String(openIncidents)} color={openIncidents > 0 ? "text-amber-400" : "text-neutral-400"} />
+            <KpiCard label={t("hub.kpi.gatesFailing")} value={String(gatesFailing)} color={gatesFailing > 0 ? "text-rose-400" : "text-neutral-400"} />
           </div>
 
           <div className="py-1">
@@ -454,8 +457,9 @@ function RunsList({
   onOpenCollection?: (id: string) => void;
   hubUrl: string;
 }) {
+  const t = useT();
   if (runs.length === 0) {
-    return <EmptyState label="No runs recorded yet" />;
+    return <EmptyState label={t("hub.runs.empty")} />;
   }
 
   return (
@@ -463,10 +467,10 @@ function RunsList({
       <table className="w-full text-xs">
         <thead className="sticky top-0 bg-neutral-950/80 backdrop-blur-sm">
           <tr className="border-b border-glass text-neutral-500">
-            <th className="px-3 py-2 text-left font-medium">Collection</th>
-            <th className="px-3 py-2 text-left font-medium w-32">Pass rate</th>
-            <th className="px-3 py-2 text-right font-medium w-20">Duration</th>
-            <th className="px-3 py-2 text-right font-medium w-24">Started</th>
+            <th className="px-3 py-2 text-left font-medium">{t("hub.runs.col.collection")}</th>
+            <th className="px-3 py-2 text-left font-medium w-32">{t("hub.runs.col.passRate")}</th>
+            <th className="px-3 py-2 text-right font-medium w-20">{t("hub.runs.col.duration")}</th>
+            <th className="px-3 py-2 text-right font-medium w-24">{t("hub.runs.col.started")}</th>
             <th className="w-8" />
           </tr>
         </thead>
@@ -476,7 +480,7 @@ function RunsList({
               key={r.id}
               className={`border-b border-glass/50 hover:bg-white/[0.02] ${r.status === "fail" ? "cursor-pointer" : ""}`}
               onClick={() => r.status === "fail" && onOpenCollection?.(r.collection_id)}
-              title={r.status === "fail" ? "Click to open collection" : undefined}
+              title={r.status === "fail" ? t("hub.runs.clickToOpen.title") : undefined}
             >
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1.5">
@@ -506,7 +510,7 @@ function RunsList({
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   className="text-neutral-600 hover:text-cobweb-400 transition"
-                  title="Open in Hub"
+                  title={t("hub.runs.openInHub")}
                 >
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -526,8 +530,9 @@ function IncidentsList({
   incidents: IncidentSummary[];
   onSelect: (i: IncidentSummary) => void;
 }) {
+  const t = useT();
   if (incidents.length === 0) {
-    return <EmptyState label="No incidents" sublabel="All clear." icon="shield" />;
+    return <EmptyState label={t("hub.incidents.empty")} sublabel={t("hub.incidents.allClear")} icon="shield" />;
   }
 
   const severityColor: Record<string, string> = {
@@ -574,8 +579,9 @@ function IncidentsList({
 }
 
 function GatesList({ gates }: { gates: QualityGateStatus[] }) {
+  const t = useT();
   if (gates.length === 0) {
-    return <EmptyState label="No quality gates defined" />;
+    return <EmptyState label={t("hub.gates.empty")} />;
   }
 
   return (
@@ -592,8 +598,8 @@ function GatesList({ gates }: { gates: QualityGateStatus[] }) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-neutral-200">{g.name}</p>
             <p className="mt-0.5 text-neutral-500">
-              Threshold: {g.threshold}
-              {g.unit} · Current: {g.current}
+              {t("hub.gates.threshold")}: {g.threshold}
+              {g.unit} · {t("hub.gates.current")}: {g.current}
               {g.unit}
             </p>
           </div>

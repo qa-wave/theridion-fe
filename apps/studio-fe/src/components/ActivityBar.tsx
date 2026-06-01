@@ -1,5 +1,6 @@
 import { Activity, MonitorPlay, Server, Smartphone, Zap } from "lucide-react";
 import { Tooltip } from "./Tooltip";
+import { useT } from "../lib/i18n/context";
 
 export type AppMode = "silk" | "monitors" | "hubOverview" | "mobile";
 
@@ -14,18 +15,20 @@ interface Props {
   onModeChange: (mode: AppMode) => void;
 }
 
-const modes: { id: AppMode; icon: typeof Zap; label: string }[] = [
-  { id: "silk", icon: MonitorPlay, label: "Silk (Frontend tests)" },
-  { id: "monitors", icon: Activity, label: "Test monitors" },
-  { id: "hubOverview", icon: Server, label: "Hub Overview" },
-  { id: "mobile", icon: Smartphone, label: "Mobilní zařízení" },
-];
-
 export function ActivityBar({ mode, onModeChange }: Props) {
+  const t = useT();
+
+  const modes: { id: AppMode; icon: typeof Zap; label: string }[] = [
+    { id: "silk", icon: MonitorPlay, label: t("activityBar.silk") },
+    { id: "monitors", icon: Activity, label: t("activityBar.monitors") },
+    { id: "hubOverview", icon: Server, label: t("activityBar.hubOverview") },
+    { id: "mobile", icon: Smartphone, label: t("activityBar.mobile") },
+  ];
+
   return (
     <nav
       role="navigation"
-      aria-label="Module switcher"
+      aria-label={t("activityBar.aria")}
       className="flex h-full w-12 flex-col items-center border-r border-white/[0.06] bg-neutral-950 py-2 gap-1"
     >
       {modes.map((m) => {

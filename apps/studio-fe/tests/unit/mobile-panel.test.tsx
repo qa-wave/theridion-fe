@@ -6,6 +6,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MobilePanel } from "../../src/components/MobilePanel";
+import { I18nProvider } from "../../src/lib/i18n/context";
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>);
+}
 
 vi.mock("../../src/lib/sidecar", () => ({
   sidecar: {
@@ -68,7 +73,7 @@ beforeEach(() => {
 describe("MobilePanel — tooling", () => {
   it("renders tool names from mocked tooling response", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() => expect(screen.getByText("adb")).toBeInTheDocument());
     expect(screen.getByText("xcrun")).toBeInTheDocument();
@@ -78,13 +83,13 @@ describe("MobilePanel — tooling", () => {
 
   it("shows availability dots for available and unavailable tools", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() => expect(screen.getByText("adb")).toBeInTheDocument());
 
-    // 2 available (adb, xcrun) → aria-label "Dostupný"; 2 unavailable → "Nedostupný"
-    const available = screen.getAllByLabelText("Dostupný");
-    const unavailable = screen.getAllByLabelText("Nedostupný");
+    // 2 available (adb, xcrun) → aria-label "Available"; 2 unavailable → "Unavailable"
+    const available = screen.getAllByLabelText("Available");
+    const unavailable = screen.getAllByLabelText("Unavailable");
     expect(available.length).toBe(2);
     expect(unavailable.length).toBe(2);
   });
@@ -97,7 +102,7 @@ describe("MobilePanel — tooling", () => {
 describe("MobilePanel — devices", () => {
   it("renders device rows from mocked devices response", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByText("Pixel_6_API_33")).toBeInTheDocument(),
@@ -107,7 +112,7 @@ describe("MobilePanel — devices", () => {
 
   it("shows platform badges for each device", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByText("Pixel_6_API_33")).toBeInTheDocument(),
@@ -118,7 +123,7 @@ describe("MobilePanel — devices", () => {
 
   it("shows Start button for Android offline device", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByText("Pixel_6_API_33")).toBeInTheDocument(),
@@ -130,7 +135,7 @@ describe("MobilePanel — devices", () => {
 
   it("clicking refresh calls mobileDevices again", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByText("Pixel_6_API_33")).toBeInTheDocument(),
@@ -139,7 +144,7 @@ describe("MobilePanel — devices", () => {
     // Should have been called once on mount
     expect(vi.mocked(sidecar.mobileDevices)).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(screen.getByRole("button", { name: /Obnovit/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Refresh/i }));
 
     await waitFor(() =>
       expect(vi.mocked(sidecar.mobileDevices)).toHaveBeenCalledTimes(2),
@@ -148,7 +153,7 @@ describe("MobilePanel — devices", () => {
 
   it("calls mobileEmulatorStart when Start is clicked for Android", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByTitle(/Start Pixel_6_API_33/)).toBeInTheDocument(),
@@ -165,7 +170,7 @@ describe("MobilePanel — devices", () => {
 
   it("calls mobileSimulatorBoot when Boot is clicked for iOS", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
       expect(screen.getByTitle(/Boot iPhone 15 Pro/)).toBeInTheDocument(),
@@ -183,10 +188,10 @@ describe("MobilePanel — devices", () => {
   it("renders empty state when device list is empty", async () => {
     vi.mocked(sidecar.mobileDevices).mockResolvedValue({ devices: [] });
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
-      expect(screen.getByText(/Žádná zařízení/i)).toBeInTheDocument(),
+      expect(screen.getByText(/No devices/i)).toBeInTheDocument(),
     );
   });
 });
@@ -198,22 +203,22 @@ describe("MobilePanel — devices", () => {
 describe("MobilePanel — Appium", () => {
   it("shows Spustit button when Appium is stopped", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Spustit/i })).toBeInTheDocument(),
+      expect(screen.getByTestId("appium-start-btn")).toBeInTheDocument(),
     );
   });
 
   it("calls mobileAppiumStart when Spustit is clicked", async () => {
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Spustit/i })).toBeInTheDocument(),
+      expect(screen.getByTestId("appium-start-btn")).toBeInTheDocument(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Spustit/i }));
+    await userEvent.click(screen.getByTestId("appium-start-btn"));
 
     await waitFor(() =>
       expect(vi.mocked(sidecar.mobileAppiumStart)).toHaveBeenCalledOnce(),
@@ -223,10 +228,10 @@ describe("MobilePanel — Appium", () => {
   it("shows Zastavit button when Appium is running", async () => {
     vi.mocked(sidecar.mobileAppiumStatus).mockResolvedValue(mockAppiumRunning);
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Zastavit/i })).toBeInTheDocument(),
+      expect(screen.getByTestId("appium-stop-btn")).toBeInTheDocument(),
     );
     expect(screen.getByText(/port 4723/i)).toBeInTheDocument();
   });
@@ -234,13 +239,13 @@ describe("MobilePanel — Appium", () => {
   it("calls mobileAppiumStop when Zastavit is clicked", async () => {
     vi.mocked(sidecar.mobileAppiumStatus).mockResolvedValue(mockAppiumRunning);
     await act(async () => {
-      render(<MobilePanel />);
+      renderWithI18n(<MobilePanel />);
     });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Zastavit/i })).toBeInTheDocument(),
+      expect(screen.getByTestId("appium-stop-btn")).toBeInTheDocument(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Zastavit/i }));
+    await userEvent.click(screen.getByTestId("appium-stop-btn"));
 
     await waitFor(() =>
       expect(vi.mocked(sidecar.mobileAppiumStop)).toHaveBeenCalledOnce(),

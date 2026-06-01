@@ -40,6 +40,7 @@ import { EmptyState } from "./EmptyState";
 import { NewTestDialog } from "./NewTestDialog";
 import { sidecar } from "../lib/sidecar";
 import { getSidecarBaseUrl, getSidecarToken } from "../lib/sidecar/client";
+import { useT } from "../lib/i18n/context";
 import type {
   SilkA11yViolation,
   SilkBrowserRunResult,
@@ -257,10 +258,11 @@ function flattenSpecs(suite: PlaywrightSuite): PlaywrightSpec[] {
 }
 
 function StepTimeline({ report }: { report: Record<string, unknown> | null }) {
+  const t = useT();
   if (!report)
     return (
       <div className="flex items-center justify-center h-full text-xs text-neutral-600">
-        No report data
+        {t("silk.timeline.noReport")}
       </div>
     );
 
@@ -270,7 +272,7 @@ function StepTimeline({ report }: { report: Record<string, unknown> | null }) {
   if (allSpecs.length === 0)
     return (
       <div className="flex items-center justify-center h-full text-xs text-neutral-600">
-        No test steps found
+        {t("silk.timeline.noSteps")}
       </div>
     );
 
@@ -315,11 +317,12 @@ function StepTimeline({ report }: { report: Record<string, unknown> | null }) {
 
 /** A11y violations list. */
 function A11yPanel({ violations }: { violations: SilkA11yViolation[] }) {
+  const t = useT();
   if (violations.length === 0)
     return (
       <div className="flex items-center justify-center h-32 text-xs text-emerald-500 gap-1.5">
         <CheckCircle2 size={14} />
-        No accessibility violations
+        {t("silk.a11y.noViolations")}
       </div>
     );
 
@@ -335,7 +338,7 @@ function A11yPanel({ violations }: { violations: SilkA11yViolation[] }) {
           {v.nodes.length > 0 && (
             <details className="text-[10px]">
               <summary className="cursor-pointer text-neutral-500 hover:text-neutral-400">
-                {v.nodes.length} affected element(s)
+                {t("silk.a11y.affectedElements", { n: v.nodes.length })}
               </summary>
               <ul className="mt-1 space-y-0.5 font-mono">
                 {v.nodes.map((n, ni) => (
@@ -361,7 +364,8 @@ function InstallDialog({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [log, setLog] = useState<string[]>(["Starting download (~150 MB)…"]);
+  const t = useT();
+  const [log, setLog] = useState<string[]>([t("silk.install.log.start")]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -398,22 +402,22 @@ function InstallDialog({
       <div className="w-[520px] rounded-lg border border-neutral-800 bg-neutral-925 shadow-2xl p-5 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-neutral-100">
           <Download size={18} className="text-emerald-400" />
-          <h2 className="font-semibold text-sm">Install Playwright Chromium</h2>
+          <h2 className="font-semibold text-sm">{t("silk.install.title")}</h2>
         </div>
         <div
           ref={logRef}
           className="h-48 overflow-y-auto rounded bg-neutral-950 p-3 font-mono text-xs text-neutral-400 select-text"
         >
           {log.map((line, i) => <div key={i}>{line}</div>)}
-          {error && <div className="text-red-400 mt-1">Error: {error}</div>}
-          {done && <div className="text-emerald-400 mt-1">Chromium ready.</div>}
+          {error && <div className="text-red-400 mt-1">{t("silk.install.error", { msg: error })}</div>}
+          {done && <div className="text-emerald-400 mt-1">{t("silk.install.chromiumReady")}</div>}
         </div>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
             className="rounded px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
           >
-            {done || error ? "Close" : "Cancel"}
+            {done || error ? t("silk.install.close") : t("silk.install.cancel")}
           </button>
         </div>
       </div>
@@ -469,6 +473,7 @@ function RecordDialog({
   onRunNow: (sessionId: string, framework: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [url, setUrl] = useState("http://localhost:3000");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [liveLines, setLiveLines] = useState<string[]>([]);
@@ -573,7 +578,7 @@ function RecordDialog({
       <div className="w-[600px] rounded-lg border border-neutral-800 bg-neutral-925 shadow-2xl p-5 flex flex-col gap-4">
         <div className="flex items-center gap-2 text-neutral-100">
           <Video size={16} className="text-emerald-400" />
-          <h2 className="font-semibold text-sm">Record new spec</h2>
+          <h2 className="font-semibold text-sm">{t("silk.record.title")}</h2>
         </div>
 
         {/* ── Phase 1: setup ── */}
@@ -581,11 +586,11 @@ function RecordDialog({
           <>
             {/* Framework selector */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-neutral-500">Framework</label>
+              <label className="text-xs text-neutral-500">{t("silk.record.framework.label")}</label>
               {loadingFrameworks ? (
                 <div className="flex items-center gap-1.5 text-xs text-neutral-500 h-7">
                   <RefreshCw size={11} className="animate-spin" />
-                  Načítám…
+                  {t("silk.record.framework.loading")}
                 </div>
               ) : (
                 <select
@@ -606,19 +611,18 @@ function RecordDialog({
               )}
               {canRecord && selectedFramework?.recordable_via_transpile && (
                 <p className="text-[10px] text-neutral-400 mt-0.5">
-                  Nahráno přes Playwright a převedeno do {selectedFramework.label}.
+                  {t("silk.record.framework.transpileNote", { label: selectedFramework.label })}
                 </p>
               )}
               {!canRecord && selectedFramework && (
                 <p className="text-[10px] text-amber-400 mt-0.5">
-                  Nahrávání zatím není podporováno pro {selectedFramework.label} — použij{" "}
-                  <strong className="text-amber-300">Nový test</strong>.
+                  {t("silk.record.framework.noRecord", { label: selectedFramework.label })}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-neutral-500">Target URL</label>
+              <label className="text-xs text-neutral-500">{t("silk.record.targetUrl.label")}</label>
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
@@ -629,16 +633,16 @@ function RecordDialog({
             {error && <div className="text-xs text-red-400">{error}</div>}
             <div className="flex justify-end gap-2">
               <button onClick={onCancel} className="rounded px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
-                Cancel
+                {t("silk.record.cancel")}
               </button>
               <button
                 onClick={() => void handleStart()}
                 disabled={!url.trim() || !canRecord}
                 className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white"
-                title={!canRecord && selectedFramework ? `Nahrávání není podporováno pro ${selectedFramework.label}` : undefined}
+                title={!canRecord && selectedFramework ? t("silk.record.framework.noRecord", { label: selectedFramework.label }) : undefined}
               >
                 <Play size={11} />
-                Start recording
+                {t("silk.record.startRecording")}
               </button>
             </div>
           </>
@@ -648,21 +652,19 @@ function RecordDialog({
         {sessionId && !capturedSpec && (
           <>
             <div className="text-xs text-neutral-400">
-              Playwright codegen is open in a browser window. Interact with your app,
-              then click <strong className="text-neutral-200">Stop recording</strong> to
-              capture the generated spec.
+              {t("silk.record.inProgress")}
             </div>
             <div
               ref={logRef}
               className="h-36 overflow-y-auto rounded bg-neutral-950 p-3 font-mono text-xs text-neutral-400 select-text"
             >
               {liveLines.map((l, i) => <div key={i}>{l}</div>)}
-              <div className="animate-pulse text-emerald-500 mt-1">Recording…</div>
+              <div className="animate-pulse text-emerald-500 mt-1">{t("silk.record.recording")}</div>
             </div>
             {error && <div className="text-xs text-red-400">{error}</div>}
             <div className="flex justify-end gap-2">
               <button onClick={onCancel} className="rounded px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
-                Cancel
+                {t("silk.record.cancel")}
               </button>
               <button
                 onClick={() => void handleStop()}
@@ -670,7 +672,7 @@ function RecordDialog({
                 className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white"
               >
                 {stopping ? <RefreshCw size={11} className="animate-spin" /> : <Square size={11} />}
-                Stop recording
+                {t("silk.record.stopRecording")}
               </button>
             </div>
           </>
@@ -680,10 +682,7 @@ function RecordDialog({
         {capturedSpec && (
           <>
             <div className="text-xs text-neutral-400">
-              Spec captured successfully.{" "}
-              <strong className="text-neutral-200">Run Now</strong> saves it and immediately
-              executes it, or{" "}
-              <strong className="text-neutral-200">Keep</strong> saves it for later.
+              {t("silk.record.captured")}
             </div>
             <div className="h-24 overflow-y-auto rounded bg-neutral-950 p-3 font-mono text-[10px] text-neutral-400 select-text">
               {capturedSpec.code.split("\n").slice(0, 12).join("\n")}
@@ -692,21 +691,21 @@ function RecordDialog({
             {error && <div className="text-xs text-red-400">{error}</div>}
             <div className="flex justify-end gap-2">
               <button onClick={onCancel} className="rounded px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
-                Discard
+                {t("silk.record.discard")}
               </button>
               <button
                 onClick={handleKeep}
                 className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs bg-neutral-700 hover:bg-neutral-600 text-neutral-200"
               >
                 <FileCode size={11} />
-                Keep
+                {t("silk.record.keep")}
               </button>
               <button
                 onClick={handleRunNow}
                 className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-emerald-700 hover:bg-emerald-600 text-white"
               >
                 <Play size={11} />
-                Run Now
+                {t("silk.record.runNow")}
               </button>
             </div>
           </>
@@ -727,6 +726,7 @@ function RunForm({
   onRun: (specPath: string, workspaceDir: string, browsers: string[]) => void;
   running: boolean;
 }) {
+  const t = useT();
   const [specPath, setSpecPath] = useState("");
   const [workspaceDir, setWorkspaceDir] = useState("");
   const [browsers, setBrowsers] = useState<string[]>(["chromium"]);
@@ -750,33 +750,33 @@ function RunForm({
       className="flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4"
     >
       <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-        Run spec
+        {t("silk.runForm.title")}
       </h3>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-neutral-500">Spec file path</label>
+        <label className="text-xs text-neutral-500">{t("silk.runForm.specPath.label")}</label>
         <input
           value={specPath}
           onChange={(e) => setSpecPath(e.target.value)}
-          placeholder="/path/to/my.spec.ts"
+          placeholder={t("silk.runForm.specPath.placeholder")}
           className="rounded bg-neutral-950 border border-neutral-800 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-emerald-600 transition-colors"
           spellCheck={false}
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-neutral-500">Workspace dir (optional)</label>
+        <label className="text-xs text-neutral-500">{t("silk.runForm.workspaceDir.label")}</label>
         <input
           value={workspaceDir}
           onChange={(e) => setWorkspaceDir(e.target.value)}
-          placeholder="/path/to/project"
+          placeholder={t("silk.runForm.workspaceDir.placeholder")}
           className="rounded bg-neutral-950 border border-neutral-800 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-emerald-600 transition-colors"
           spellCheck={false}
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-neutral-500">Browsers</label>
+        <label className="text-xs text-neutral-500">{t("silk.runForm.browsers.label")}</label>
         <div className="flex gap-1.5">
           {BROWSERS.map((b) => (
             <button
@@ -802,7 +802,7 @@ function RunForm({
           className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
         >
           {running ? <RefreshCw size={12} className="animate-spin" /> : <Play size={12} />}
-          {running ? "Running…" : "Run"}
+          {running ? t("silk.runForm.running") : t("silk.runForm.run")}
         </button>
       </div>
     </form>
@@ -818,6 +818,7 @@ interface SilkPanelProps {
 }
 
 export function SilkPanel({ onToast }: SilkPanelProps) {
+  const t = useT();
   const [browsersInstalled, setBrowsersInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showRecordDialog, setShowRecordDialog] = useState(false);
@@ -1001,15 +1002,15 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
 
   // Right-panel tab definitions.
   const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-    { id: "timeline", label: "Timeline", icon: <Play size={11} /> },
-    { id: "network", label: "Network", icon: <Globe size={11} /> },
-    { id: "screenshots", label: "Screenshots", icon: <Image size={11} /> },
+    { id: "timeline", label: t("silk.tabs.timeline"), icon: <Play size={11} /> },
+    { id: "network", label: t("silk.tabs.network"), icon: <Globe size={11} /> },
+    { id: "screenshots", label: t("silk.tabs.screenshots"), icon: <Image size={11} /> },
     {
       id: "a11y",
       label: `A11y${a11yViolations.length > 0 ? ` (${a11yViolations.length})` : ""}`,
       icon: <AlertTriangle size={11} className={a11yViolations.length > 0 ? "text-amber-400" : ""} />,
     },
-    { id: "console", label: "Console", icon: <Terminal size={11} /> },
+    { id: "console", label: t("silk.tabs.console"), icon: <Terminal size={11} /> },
   ];
 
   return (
@@ -1042,18 +1043,18 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
               onClick={() => setShowRecordDialog(true)}
               disabled={!browsersInstalled}
               className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-neutral-200 transition-colors"
-              title={browsersInstalled ? "Record new spec via Playwright codegen" : "Install browsers first"}
+              title={browsersInstalled ? t("silk.toolbar.record.title") : t("silk.toolbar.record.titleNoBrowsers")}
             >
               <Video size={12} className="text-red-400" />
-              Record
+              {t("silk.toolbar.record")}
             </button>
             <button
               onClick={() => setShowNewTestDialog(true)}
               className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors"
-              title="Vytvoř nový test ručně v editoru"
+              title={t("silk.toolbar.newTest.title")}
             >
               <FileCode size={12} className="text-emerald-400" />
-              Nový test
+              {t("silk.toolbar.newTest")}
             </button>
           </div>
 
@@ -1065,13 +1066,13 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                 className="flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300"
               >
                 <Download size={10} />
-                Install browsers
+                {t("silk.toolbar.installBrowsers")}
               </button>
             )}
             <button
               onClick={() => void checkBrowsers()}
               disabled={checkingBrowsers}
-              title="Refresh browser check"
+              title={t("silk.toolbar.refreshBrowserCheck")}
               className="text-neutral-500 hover:text-neutral-300 transition-colors"
             >
               <RefreshCw size={12} className={checkingBrowsers ? "animate-spin" : ""} />
@@ -1079,7 +1080,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
             <button
               onClick={() => void loadHistory()}
               disabled={loadingHistory}
-              title="Refresh run history"
+              title={t("silk.toolbar.refreshHistory")}
               className="text-neutral-500 hover:text-neutral-300 transition-colors"
             >
               <History size={12} className={loadingHistory ? "animate-spin" : ""} />
@@ -1094,13 +1095,13 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
             <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
                 <MonitorPlay size={12} className="text-emerald-500" />
-                History
+                {t("silk.history.title")}
               </span>
               <button
                 onClick={() => handleRun("", "", ["chromium"])}
                 disabled={running}
                 className="text-neutral-500 hover:text-emerald-400 transition-colors"
-                title="New run"
+                title={t("silk.history.newRun.title")}
               >
                 <Plus size={12} />
               </button>
@@ -1111,8 +1112,8 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
               {sessionRuns.length === 0 && historyRuns.length === 0 && (
                 <EmptyState
                   icon={History}
-                  title="No runs yet"
-                  description="Run a spec to see results here"
+                  title={t("silk.history.empty.title")}
+                  description={t("silk.history.empty.description")}
                 />
               )}
 
@@ -1151,7 +1152,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
               {historyRuns.length > 0 && (
                 <>
                   <div className="px-3 py-1.5 text-[10px] uppercase text-neutral-600 tracking-wider">
-                    Previous runs
+                    {t("silk.history.previousRuns")}
                   </div>
                   {historyRuns
                     .filter((h) => !sessionRuns.some((s) => s.run.run_id === h.id))
@@ -1216,29 +1217,29 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                       className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
                     >
                       <Download size={11} />
-                      Trace
+                      {t("silk.network.downloadTrace")}
                     </a>
                   )}
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     {
-                      label: "Passed",
+                      label: t("silk.stats.passed"),
                       value: browserResult?.passed ?? selectedRun.passed,
                       color: "text-emerald-400",
                     },
                     {
-                      label: "Failed",
+                      label: t("silk.stats.failed"),
                       value: browserResult?.failed ?? selectedRun.failed,
                       color: "text-red-400",
                     },
                     {
-                      label: "Errors",
+                      label: t("silk.stats.errors"),
                       value: browserResult?.errors ?? selectedRun.errors,
                       color: "text-amber-400",
                     },
                     {
-                      label: "Duration",
+                      label: t("silk.stats.duration"),
                       value: durationLabel(browserResult?.duration_ms ?? selectedRun.duration_ms),
                       color: "text-neutral-300",
                     },
@@ -1254,7 +1255,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                 {(browserResult?.stderr_tail || selectedRun.stderr_tail) && (
                   <div className="mt-3">
                     <span className="text-[10px] uppercase text-neutral-500 tracking-wider">
-                      stderr (last 20 lines)
+                      {t("silk.stats.stderr")}
                     </span>
                     <pre className="mt-1 max-h-28 overflow-y-auto rounded bg-neutral-950 p-2 text-[10px] text-neutral-400 font-mono whitespace-pre-wrap">
                       {browserResult?.stderr_tail ?? selectedRun.stderr_tail}
@@ -1266,7 +1267,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
 
             {!selectedRun && (
               <div className="flex flex-1 items-center justify-center text-xs text-neutral-600">
-                Select a run from the history to view results
+                {t("silk.stats.selectRun")}
               </div>
             )}
           </div>
@@ -1311,7 +1312,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                     </pre>
                   ) : (
                     <div className="flex items-center justify-center h-24 text-xs text-neutral-600">
-                      No console output
+                      {t("silk.console.noOutput")}
                     </div>
                   )}
                 </div>
@@ -1324,7 +1325,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                   return (
                     <div className="flex items-center justify-center h-full text-xs text-neutral-600 flex-col gap-2">
                       <Globe size={20} className="text-neutral-700" />
-                      {activeReport ? "No network entries in report" : "Network log available in Playwright trace"}
+                      {activeReport ? t("silk.network.noEntries.noReport") : t("silk.network.noEntries.inTrace")}
                       {selectedSession?.traceUrl && (
                         <a
                           href={selectedSession.traceUrl}
@@ -1332,7 +1333,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                           className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300"
                         >
                           <Download size={11} />
-                          Download trace
+                          {t("silk.network.downloadTrace")}
                         </a>
                       )}
                     </div>
@@ -1341,7 +1342,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                 return (
                   <div className="flex flex-col overflow-y-auto h-full">
                     <div className="px-3 py-1.5 border-b border-neutral-800 text-[10px] text-neutral-500">
-                      {networkEntries.length} request(s)
+                      {t("silk.network.requestCount", { n: networkEntries.length })}
                     </div>
                     {networkEntries.map((entry, i) => {
                       const req = entry.request ?? {};
@@ -1372,7 +1373,7 @@ export function SilkPanel({ onToast }: SilkPanelProps) {
                   return (
                     <div className="flex items-center justify-center h-full text-xs text-neutral-600 flex-col gap-2">
                       <Image size={20} className="text-neutral-700" />
-                      {activeReport ? "No screenshots in report" : "Screenshots captured during run"}
+                      {activeReport ? t("silk.screenshots.none.noReport") : t("silk.screenshots.none.captured")}
                     </div>
                   );
                 }

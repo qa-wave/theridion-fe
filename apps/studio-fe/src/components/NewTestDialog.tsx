@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { FileCode, RefreshCw, Save, X } from "lucide-react";
 import { sidecar } from "../lib/sidecar";
+import { useT } from "../lib/i18n/context";
 import type { SilkFramework } from "../lib/sidecar/silk";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,7 @@ interface NewTestDialogProps {
 }
 
 export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
+  const t = useT();
   const [frameworks, setFrameworks] = useState<SilkFramework[]>([]);
   const [loadingFrameworks, setLoadingFrameworks] = useState(true);
   const [frameworksError, setFrameworksError] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
       .catch((e: unknown) => {
         setFrameworksError(e instanceof Error ? e.message : String(e));
         // Fallback: prázdný editor + default framework id
-        setCode("// Framework templates not available — write your test manually");
+        setCode(t("newTest.fallbackTemplate"));
       })
       .finally(() => setLoadingFrameworks(false));
   }, []);
@@ -141,12 +143,12 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
         <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-3 shrink-0">
           <div className="flex items-center gap-2 text-neutral-100">
             <FileCode size={16} className="text-emerald-400" />
-            <h2 className="font-semibold text-sm">Nový test (ruční tvorba)</h2>
+            <h2 className="font-semibold text-sm">{t("newTest.title")}</h2>
           </div>
           <button
             onClick={onCancel}
             className="text-neutral-500 hover:text-neutral-300 transition-colors"
-            aria-label="Zavřít"
+            aria-label={t("newTest.close.aria")}
           >
             <X size={16} />
           </button>
@@ -158,11 +160,11 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
           <div className="flex gap-3 items-end flex-wrap">
             {/* Framework select */}
             <div className="flex flex-col gap-1 min-w-[200px]">
-              <label className="text-xs text-neutral-500">Framework</label>
+              <label className="text-xs text-neutral-500">{t("newTest.framework.label")}</label>
               {loadingFrameworks ? (
                 <div className="flex items-center gap-1.5 text-xs text-neutral-500 h-7">
                   <RefreshCw size={11} className="animate-spin" />
-                  Načítám…
+                  {t("newTest.framework.loading")}
                 </div>
               ) : (
                 <select
@@ -197,18 +199,18 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
               )}
               {frameworksError && (
                 <span className="text-[10px] text-amber-400">
-                  Nelze načíst seznam frameworků
+                  {t("newTest.framework.loadError")}
                 </span>
               )}
             </div>
 
             {/* Filename */}
             <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-              <label className="text-xs text-neutral-500">Název souboru</label>
+              <label className="text-xs text-neutral-500">{t("newTest.filename.label")}</label>
               <input
                 value={filename}
                 onChange={(e) => setFilename(e.target.value)}
-                placeholder="my_test.spec.ts"
+                placeholder={t("newTest.filename.placeholder")}
                 className="rounded bg-neutral-950 border border-neutral-800 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-emerald-600 transition-colors"
                 spellCheck={false}
               />
@@ -216,11 +218,11 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
 
             {/* Workspace dir */}
             <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-              <label className="text-xs text-neutral-500">Workspace dir (volitelné)</label>
+              <label className="text-xs text-neutral-500">{t("newTest.workspaceDir.label")}</label>
               <input
                 value={workspaceDir}
                 onChange={(e) => setWorkspaceDir(e.target.value)}
-                placeholder="/path/to/project"
+                placeholder={t("newTest.workspaceDir.placeholder")}
                 className="rounded bg-neutral-950 border border-neutral-800 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-emerald-600 transition-colors"
                 spellCheck={false}
               />
@@ -231,7 +233,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
           <div className="flex flex-col gap-1 flex-1 min-h-[300px]">
             <div className="flex items-center justify-between">
               <label className="text-xs text-neutral-500">
-                Kód testu
+                {t("newTest.code.label")}
                 <span className="ml-2 text-neutral-700">({language})</span>
               </label>
               {selectedFramework && (
@@ -243,7 +245,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
                   }}
                   className="text-[10px] text-neutral-600 hover:text-neutral-400 transition-colors"
                 >
-                  Obnovit template
+                  {t("newTest.code.resetTemplate")}
                 </button>
               )}
             </div>
@@ -273,7 +275,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
             <div className="flex items-start gap-2 rounded border border-emerald-800 bg-emerald-950/40 px-3 py-2.5 text-xs text-emerald-300">
               <Save size={12} className="mt-0.5 shrink-0" />
               <span>
-                Uloženo: <span className="font-mono text-emerald-200 break-all">{savedPath}</span>
+                {t("newTest.saved.prefix")}<span className="font-mono text-emerald-200 break-all">{savedPath}</span>
               </span>
             </div>
           )}
@@ -296,7 +298,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
               onClick={onCancel}
               className="rounded px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
             >
-              Zavřít
+              {t("newTest.close")}
             </button>
             <button
               onClick={() => void handleSave()}
@@ -308,7 +310,7 @@ export function NewTestDialog({ onSaved, onCancel }: NewTestDialogProps) {
               ) : (
                 <Save size={11} />
               )}
-              {saving ? "Ukládám…" : "Uložit"}
+              {saving ? t("newTest.saving") : t("newTest.save")}
             </button>
           </div>
         </div>

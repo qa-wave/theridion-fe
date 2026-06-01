@@ -6,8 +6,11 @@ import { HubOverviewPanel } from "./components/HubOverviewPanel";
 import { MobilePanel } from "./components/MobilePanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { EmptyState } from "./components/EmptyState";
+import { LangSwitcher } from "./components/LangSwitcher";
+import { useT } from "./lib/i18n/context";
 
 export default function App() {
+  const t = useT();
   const [mode, setMode] = useState<AppMode>("silk");
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
 
@@ -26,8 +29,8 @@ export default function App() {
             {mode === "monitors" && (
               <EmptyState
                 icon={Activity}
-                title="Test monitors"
-                description="Scheduled Playwright run monitoring (synthetic FE checks). Vytvoř monitor v Silk panelu přes 'Schedule run' tlačítko."
+                title={t("monitors.title")}
+                description={t("monitors.description")}
               />
             )}
             {mode === "hubOverview" && <HubOverviewPanel />}
@@ -35,8 +38,11 @@ export default function App() {
           </main>
         </div>
         <footer className="flex h-7 items-center justify-between border-t border-white/[0.06] bg-neutral-950 px-3 text-[11px] text-neutral-500">
-          <span>Theridion FE v0.0.1</span>
-          <span>{mode}</span>
+          <span>{t("app.version")}</span>
+          <div className="flex items-center gap-3">
+            <LangSwitcher />
+            <span>{mode}</span>
+          </div>
         </footer>
         {toast && (
           <div

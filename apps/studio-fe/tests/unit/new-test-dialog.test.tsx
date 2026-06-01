@@ -6,6 +6,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NewTestDialog } from "../../src/components/NewTestDialog";
+import { I18nProvider } from "../../src/lib/i18n/context";
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>);
+}
 
 // Monaco doesn't render in jsdom — replace with a controlled textarea so we
 // can assert on the template content and simulate edits.
@@ -78,7 +83,7 @@ beforeEach(() => {
 describe("NewTestDialog — mount", () => {
   it("loads frameworks and seeds the default playwright-ts template", async () => {
     await act(async () => {
-      render(<NewTestDialog onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onCancel={vi.fn()} />);
     });
     expect(vi.mocked(sidecar.silkFrameworks)).toHaveBeenCalledOnce();
     await waitFor(() =>
@@ -89,7 +94,7 @@ describe("NewTestDialog — mount", () => {
 
   it("groups frameworks into Web and Mobile optgroups", async () => {
     await act(async () => {
-      render(<NewTestDialog onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onCancel={vi.fn()} />);
     });
     await waitFor(() =>
       expect(screen.getByText("Playwright (TypeScript)")).toBeInTheDocument(),
@@ -101,7 +106,7 @@ describe("NewTestDialog — mount", () => {
 describe("NewTestDialog — framework switch", () => {
   it("updates template and filename when framework changes", async () => {
     await act(async () => {
-      render(<NewTestDialog onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onCancel={vi.fn()} />);
     });
     await waitFor(() =>
       expect(screen.getByTestId("monaco")).toHaveValue("// PW TS template"),
@@ -120,13 +125,13 @@ describe("NewTestDialog — save", () => {
   it("posts the spec and surfaces the saved path", async () => {
     const onSaved = vi.fn();
     await act(async () => {
-      render(<NewTestDialog onSaved={onSaved} onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onSaved={onSaved} onCancel={vi.fn()} />);
     });
     await waitFor(() =>
       expect(screen.getByTestId("monaco")).toHaveValue("// PW TS template"),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Uložit/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
 
     await waitFor(() =>
       expect(vi.mocked(sidecar.silkSpecSave)).toHaveBeenCalledWith(
@@ -150,13 +155,13 @@ describe("NewTestDialog — save", () => {
       new Error("filename contains illegal path segment"),
     );
     await act(async () => {
-      render(<NewTestDialog onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onCancel={vi.fn()} />);
     });
     await waitFor(() =>
       expect(screen.getByTestId("monaco")).toHaveValue("// PW TS template"),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Uložit/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Save/i }));
 
     await waitFor(() =>
       expect(
@@ -172,10 +177,10 @@ describe("NewTestDialog — framework load failure", () => {
       new Error("sidecar down"),
     );
     await act(async () => {
-      render(<NewTestDialog onCancel={vi.fn()} />);
+      renderWithI18n(<NewTestDialog onCancel={vi.fn()} />);
     });
     await waitFor(() =>
-      expect(screen.getByText(/Nelze načíst seznam frameworků/i)).toBeInTheDocument(),
+      expect(screen.getByText(/Could not load framework list/i)).toBeInTheDocument(),
     );
     expect(screen.getByTestId("monaco")).toHaveValue(
       "// Framework templates not available — write your test manually",

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { sidecar } from "../lib/sidecar";
+import { useT } from "../lib/i18n/context";
 import type {
   AppiumStatusOutput,
   MobileDevice,
@@ -35,12 +36,13 @@ import type {
 
 /** Small availability dot (green = available, red = missing). */
 function AvailabilityDot({ available }: { available: boolean }) {
+  const t = useT();
   return (
     <span
       className={`inline-block h-2 w-2 rounded-full shrink-0 ${
         available ? "bg-emerald-400" : "bg-red-500"
       }`}
-      aria-label={available ? "Dostupný" : "Nedostupný"}
+      aria-label={available ? t("mobile.tooling.dot.available") : t("mobile.tooling.dot.unavailable")}
     />
   );
 }
@@ -65,29 +67,30 @@ function PlatformBadge({ platform }: { platform: "android" | "ios" }) {
 // ---------------------------------------------------------------------------
 
 function ToolingSection({ tools, loading }: { tools: MobileTool[]; loading: boolean }) {
+  const t = useT();
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3 flex flex-col gap-2">
       <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
         <Cpu size={12} className="text-neutral-500" />
-        Nástroje
+        {t("mobile.tooling.title")}
       </h3>
       {loading ? (
         <div className="flex items-center gap-1.5 text-xs text-neutral-500">
           <RefreshCw size={11} className="animate-spin" />
-          Načítám…
+          {t("mobile.tooling.loading")}
         </div>
       ) : tools.length === 0 ? (
-        <div className="text-xs text-neutral-600">Žádné nástroje nenalezeny</div>
+        <div className="text-xs text-neutral-600">{t("mobile.tooling.empty")}</div>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {tools.map((t) => (
-            <li key={t.name} className="flex items-center gap-2">
-              <AvailabilityDot available={t.available} />
-              <span className="font-mono text-xs text-neutral-300 w-20 shrink-0">{t.name}</span>
-              {t.path ? (
-                <span className="text-[10px] text-neutral-600 truncate font-mono">{t.path}</span>
+          {tools.map((tool) => (
+            <li key={tool.name} className="flex items-center gap-2">
+              <AvailabilityDot available={tool.available} />
+              <span className="font-mono text-xs text-neutral-300 w-20 shrink-0">{tool.name}</span>
+              {tool.path ? (
+                <span className="text-[10px] text-neutral-600 truncate font-mono">{tool.path}</span>
               ) : (
-                <span className="text-[10px] text-neutral-700 italic">nenalezeno</span>
+                <span className="text-[10px] text-neutral-700 italic">{t("mobile.tooling.notFound")}</span>
               )}
             </li>
           ))}
@@ -108,12 +111,13 @@ interface DeviceRowProps {
 }
 
 function DeviceRow({ device, onBoot, booting }: DeviceRowProps) {
+  const t = useT();
   const isRunning =
     device.state.toLowerCase() === "booted" ||
     device.state.toLowerCase() === "online" ||
     device.state.toLowerCase() === "running";
 
-  const actionLabel = device.platform === "ios" ? "Boot" : "Start";
+  const actionLabel = device.platform === "ios" ? t("mobile.devices.action.boot") : t("mobile.devices.action.start");
 
   return (
     <div className="flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-3 py-2">
@@ -157,17 +161,18 @@ interface AppiumSectionProps {
 }
 
 function AppiumSection({ status, loading, onStart, onStop, acting }: AppiumSectionProps) {
+  const t = useT();
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3 flex flex-col gap-2">
       <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
         <Server size={12} className="text-neutral-500" />
-        Appium server
+        {t("mobile.appium.title")}
       </h3>
 
       {loading ? (
         <div className="flex items-center gap-1.5 text-xs text-neutral-500">
           <RefreshCw size={11} className="animate-spin" />
-          Načítám stav…
+          {t("mobile.appium.loading")}
         </div>
       ) : (
         <div className="flex items-center justify-between gap-2">
@@ -179,8 +184,8 @@ function AppiumSection({ status, loading, onStart, onStop, acting }: AppiumSecti
             )}
             <span className="text-xs text-neutral-300">
               {status?.running
-                ? `Běží — port ${status.port}`
-                : "Zastaveno"}
+                ? t("mobile.appium.running", { port: status.port })
+                : t("mobile.appium.stopped")}
             </span>
             {status?.detail && (
               <span className="text-[10px] text-neutral-600 truncate max-w-[160px]">
@@ -192,19 +197,21 @@ function AppiumSection({ status, loading, onStart, onStop, acting }: AppiumSecti
             <button
               onClick={onStop}
               disabled={acting}
+              data-testid="appium-stop-btn"
               className="flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium bg-red-900/60 hover:bg-red-800/60 disabled:opacity-40 text-red-300 border border-red-800 transition-colors shrink-0"
             >
               {acting ? <RefreshCw size={10} className="animate-spin" /> : <XCircle size={10} />}
-              Zastavit
+              {t("mobile.appium.stop")}
             </button>
           ) : (
             <button
               onClick={onStart}
               disabled={acting}
+              data-testid="appium-start-btn"
               className="flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white transition-colors shrink-0"
             >
               {acting ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
-              Spustit
+              {t("mobile.appium.start")}
             </button>
           )}
         </div>
@@ -222,6 +229,7 @@ interface MobilePanelProps {
 }
 
 export function MobilePanel({ onToast }: MobilePanelProps) {
+  const t = useT();
   const [tools, setTools] = useState<MobileTool[]>([]);
   const [loadingTools, setLoadingTools] = useState(false);
 
@@ -340,16 +348,16 @@ export function MobilePanel({ onToast }: MobilePanelProps) {
       <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2 shrink-0">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
           <Smartphone size={13} className="text-emerald-500" />
-          Mobilní zařízení
+          {t("mobile.title")}
         </div>
         <button
           onClick={() => void refreshDevices()}
           disabled={loadingDevices}
-          title="Obnovit seznam zařízení"
+          title={t("mobile.refresh.title")}
           className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
         >
           <RefreshCw size={12} className={loadingDevices ? "animate-spin" : ""} />
-          Obnovit
+          {t("mobile.refresh")}
         </button>
       </div>
 
@@ -363,7 +371,7 @@ export function MobilePanel({ onToast }: MobilePanelProps) {
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
               <Smartphone size={12} className="text-neutral-500" />
-              Zařízení
+              {t("mobile.devices.title")}
             </h3>
             {devicesError && (
               <div className="flex items-center gap-1 text-[10px] text-red-400">
@@ -376,13 +384,13 @@ export function MobilePanel({ onToast }: MobilePanelProps) {
           {loadingDevices ? (
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
               <RefreshCw size={11} className="animate-spin" />
-              Načítám zařízení…
+              {t("mobile.devices.loading")}
             </div>
           ) : devices.length === 0 ? (
             <EmptyState
               icon={Smartphone}
-              title="Žádná zařízení"
-              description="Připoj zařízení nebo spusť simulátor / emulátor"
+              title={t("mobile.devices.empty.title")}
+              description={t("mobile.devices.empty.description")}
             />
           ) : (
             <div className="flex flex-col gap-1.5">
