@@ -14,14 +14,14 @@ html.theme-cobweb {
   --accent-100: 207 250 254;
   --accent-200: 165 243 252;
   --accent-300: 103 232 249;
-  --accent-400: 34 211 232;
-  --accent-500: 0 180 208;
+  --accent-400: 34 211 238;
+  --accent-500: 6 182 212;
   --accent-600: 8 145 178;
   --accent-700: 14 116 144;
   --accent-800: 21 94 117;
   --accent-900: 22 78 99;
   --accent-950: 8 51 68;
-  --accent-glow: 0 180 208;
+  --accent-glow: 6 182 212;
   --gradient-end: 0 87 255;
   --canvas-tint: 10 10 10;
   --mesh-a: rgba(6,182,212,0.04);
