@@ -85,6 +85,14 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         timeout=30.0,
         follow_redirects=True,
     )
+
+    # Seed demo history data on first run (idempotent, non-fatal).
+    try:
+        from theridion_sidecar import seed as _seed
+        _seed.maybe_seed()
+    except Exception as _seed_exc:  # noqa: BLE001
+        logger.warning("seed skipped: %s", _seed_exc)
+
     try:
         yield
     finally:
